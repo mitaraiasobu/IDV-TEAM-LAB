@@ -237,6 +237,14 @@
         .then(function (pt) { return JSON.parse(dec.decode(pt)); }, function () { return null; });
     } catch (e) { return Promise.resolve(null); }
   }
+  function wipeTok(key) {                                                    // 「データの削除」用の値：パスワードから作った鍵から作る（パスワードを知らない人は、作れない）
+    return crypto.subtle.exportKey("raw", key).then(function (raw) {
+      var a = new Uint8Array(raw), pre = enc.encode("IDV-TEAM-LAB-wipe|"), m = new Uint8Array(pre.length + a.length);
+      m.set(pre, 0); m.set(a, pre.length);
+      return crypto.subtle.digest("SHA-256", m);
+    }).then(b64);
+  }
+  function wipeHash(tokB64) { return crypto.subtle.digest("SHA-256", unb64(tokB64)).then(b64); }    // setup に置く、照合の値（これだけでは、削除の依頼は作れない）
   function uid() { return hex(rand(10)); }
   var CID = (function () {                                                   // この端末（ブラウザ）のID。ブラウザのデータを消すと、新しいIDになる
     try { var v = localStorage.getItem("lab_cid"); if (!v) { v = hex(rand(16)); localStorage.setItem("lab_cid", v); } return v; } catch (e) { return hex(rand(16)); }
@@ -315,7 +323,7 @@
   function postEvent(ev) {
     return seal(ev).then(function (c) {
       return fetch(DBURL + "/log.json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ c: c, t: { ".sv": "timestamp" } }) });
-    }).then(function (r) { if (!r.ok) throw new Error(String(r.status)); });
+    }).then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json().catch(function () { return null; }); });
   }
   function sendEvent(ev) {
     ev.i = uid(); ev.cid = CID; ev.n = who(); ev.d = guessDevice(); ev.ts = Date.now();
@@ -369,7 +377,7 @@
       brand(c, "このボードのデータは、削除されました");
       var w = el("div", "warn");
       w.appendChild(el("div", "", "🗑 削除した人：" + (WIPED.n || "?") + "（ID " + String(WIPED.cid || "").slice(0, 6) + "）　" + fmtTime(WIPED.t)));
-      w.appendChild(el("div", "", "削除されたデータは、このページには、二度と表示されません。復活できません。"));
+      w.appendChild(el("div", "", "削除されたデータは、このページには、二度と表示されません。復活できません。サーバーの暗号化されたデータも、運営のBOTが、削除します。"));
       w.appendChild(el("div", "", (RAWMETA && RAWMETA.mode === "free")
         ? "次回からは、新しい作戦ボードを作って、ご利用ください。"
         : "次回からは、新しいURLを作り直して、ご利用ください（チーム専用チャンネルの「🔄 URLを作り直す」。リーダーか管理者が押せます）。"));
@@ -437,15 +445,18 @@
         if (!PW_RULE.test(a)) { m.textContent = "パスワードは、英大文字・英小文字・数字を、すべて使った、10〜20文字の英数字にしてください。"; return; }
         if (a !== b) { m.textContent = "2つのパスワードが、同じではありません。"; return; }
         go.disabled = true; m.textContent = "鍵を作っています…（数秒かかります）";
-        var salt = b64(rand(16)), iter = 600000, chk = null;
+        var salt = b64(rand(16)), iter = 600000, chk = null, dhv = null;
         deriveKey(a, salt, iter).then(function (key) {
           KEY = key;
           return seal({ chk: "IDV-TEAM-LAB", v: 1 });
         }).then(function (check) {
           chk = check;
-          return fetch(DBURL + "/setup.json", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ salt: salt, iter: iter, check: check, t: { ".sv": "timestamp" } }) });
+          return wipeTok(KEY).then(wipeHash).then(function (h) {
+            dhv = h;
+            return fetch(DBURL + "/setup.json", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ salt: salt, iter: iter, check: check, dh: h, t: { ".sv": "timestamp" } }) });
+          });
         }).then(function (r) {
-          if (r.ok) { SETUP = { salt: salt, iter: iter, check: chk }; unlock(false); return; }
+          if (r.ok) { SETUP = { salt: salt, iter: iter, check: chk, dh: dhv }; unlock(false); return; }
           KEY = null; go.disabled = false;
           m.textContent = r.status === 401 || r.status === 403 ? "すでに、ほかの人がパスワードを決めています。このページを開き直して、そのパスワードでログインしてください。" : "保存できませんでした（" + r.status + "）。";
         }).catch(function () { KEY = null; go.disabled = false; m.textContent = "つながりませんでした。通信を確認して、もう一度お試しください。"; });
@@ -693,19 +704,30 @@
     if (HIST.length > 300) c.appendChild(el("div", "hint", "古い記録は、省略しています（全部、Firebaseに残っています）。"));
     // データの削除（パスワードが要る）
     var dz = el("div", "danger"); dz.appendChild(el("h3", "", "🗑 データの削除"));
-    dz.appendChild(el("div", "", "パスワードを入力すると、このボードのデータを、すべて削除できます。削除すると、このページには、二度と表示されません（復活できません）。そのあとは、パスワードを入力しても、「だれが削除したか」だけが表示されます。削除したあとは、新しいURLを作り直してご利用ください。"));
+    dz.appendChild(el("div", "", "パスワードを入力すると、このボードのデータ（作戦・履歴）を、すべて削除できます。削除すると、このページには、二度と表示されず、サーバーの暗号化されたデータも、運営のBOTが、消します（BOTが動いているとき、1分ほどで消えます）。そのあとは、パスワードを入力しても、「だれが削除したか」だけが表示されます。チームの名前など、暗号化されていない情報は、消えません。削除したあとは、新しいURLを作り直してご利用ください。"));
     var dpw = field(dz, "パスワード");
     var del = el("button", "del", "データを削除する"); del.type = "button"; dz.appendChild(del);
     var dmsg = el("div", "dmsg"); dz.appendChild(dmsg);
     del.addEventListener("click", function () {
       if (!dpw.value) { dmsg.textContent = "パスワードを入れてください。"; return; }
       del.disabled = true; dmsg.textContent = "確認しています…（数秒かかります）";
-      deriveKey(dpw.value, SETUP.salt, SETUP.iter).then(function (key) { return unseal(SETUP.check, key); }).then(function (o) {
+      var dkey = null;
+      deriveKey(dpw.value, SETUP.salt, SETUP.iter).then(function (key) { dkey = key; return unseal(SETUP.check, key); }).then(function (o) {
         if (!o || o.chk !== "IDV-TEAM-LAB") { del.disabled = false; dmsg.textContent = "パスワードが違います。"; return undefined; }
         if (!window.confirm("このボードのデータを、すべて削除します。元に戻せません。本当に、削除しますか？")) { del.disabled = false; dmsg.textContent = ""; return undefined; }
         dmsg.textContent = "削除しています…";
-        return postEvent({ k: "wipe", i: uid(), cid: CID, n: who(), d: guessDevice(), ts: Date.now() }).then(function () {
-          dmsg.textContent = "削除しました。";                                    // このあと、みんなの画面が、削除済みの表示に変わる
+        var ROOT = (window.LAB_DB_URL || "").replace(/\/+$/, ""), jsonH = { "Content-Type": "application/json" };
+        return postEvent({ k: "wipe", i: uid(), cid: CID, n: who(), d: guessDevice(), ts: Date.now() }).then(function (res) {
+          var k = res && res.name;
+          if (!SETUP.dh || !k) return "old";                                     // 古い形式のボード：サーバーの暗号化されたデータは、消せない
+          return wipeTok(dkey).then(function (tok) {                             // サーバーの暗号化されたデータの、削除の依頼（BOTが、本物か確かめて、消す）
+            return fetch(DBURL + "/wipereq.json", { method: "POST", headers: jsonH, body: JSON.stringify({ tok: tok, k: k, t: { ".sv": "timestamp" } }) });
+          }).then(function (r) {
+            if (!r.ok) throw new Error(String(r.status));
+            return fetch(ROOT + "/lab_wipe/" + ID + ".json", { method: "PUT", headers: jsonH, body: JSON.stringify({ t: { ".sv": "timestamp" } }) });
+          }).then(function (r) { if (!r.ok) throw new Error(String(r.status)); return "ok"; });
+        }).then(function (st) {
+          dmsg.textContent = st === "old" ? "削除しました（このボードは古い形式のため、サーバーの暗号化されたデータは、残ります）。" : "削除しました。サーバーの暗号化されたデータも、運営のBOTが、まもなく（1分ほどで）削除します。";
         }, function () { del.disabled = false; dmsg.textContent = "削除できませんでした（通信を確認して、もう一度）。"; });
       }).catch(function () { del.disabled = false; dmsg.textContent = "確認できませんでした。"; });
     });
@@ -1332,25 +1354,29 @@
       ["b", "Firebase（Google）：パスワードの設定・ログイン・作戦データや履歴の保存と同期"],
       ["p", "ページの表示のときはGitHubへ、ログインや保存・同期のときはFirebaseへ、通信します。IPアドレスなどは、各サービスに送られ、各サービスの方針に従って、処理・記録されることがあります。"],
       ["p", "このページには、IPアドレスを取得・記録・利用する機能は、ありません。運営者のBOTも、このページとは通信しません（BOTがFirebaseに書くのは、チームの場所に置く、大会の情報だけです）。運営者が、各サービスの管理画面やログから、IPアドレスなどを見られるかどうかは、各サービスの仕様と、運営者の権限によります。"],
-      ["p", "各サービスでの情報の取り扱いは、各社のプライバシーポリシーをご確認ください。"],
+      ["p", "通信先を、この2つに限っているのは、ブラウザの設定によるもので、通信先に渡る情報や、各社でのログの保存まで、制限するものではありません。各サービスでの情報の取り扱いは、各社のプライバシーポリシーをご確認ください。"],
       ["l", [["GitHub", "https://docs.github.com/ja/site-policy/privacy-policies/github-general-privacy-statement"], ["Google", "https://policies.google.com/privacy?hl=ja"]]]]],
     ["2. ブラウザ内に保存する情報", [
-      ["p", "このページは、Cookieを使いません。ブラウザの保存領域（localStorage）に、次の情報を保存します。"],
-      ["b", "端末識別用のランダムな番号と、ランダムな英数字6文字：履歴で、どの端末の操作かを区別するため。"],
-      ["b", "名前：履歴や画面で、利用者を区別するため。"],
-      ["b", "同意の記録：次回から、この画面を省くため。"],
-      ["b", "確認済みの端末の記録：「知らない端末のお知らせ」で、確認した端末を覚えるため。"],
-      ["b", "表示の設定（キャラクターの、職業ごとの並び替え）。"],
-      ["b", "ログイン情報：「この端末にログインを保存する」を選んだときだけ保存します。保存されるのは、パスワードそのものではなく、作戦を暗号化・復号するための鍵です。この端末のブラウザの保存データを見られる人は、パスワードなしで、このボードを開けます。共有のパソコンでは、選ばないでください。"],
-      ["b", "開いていたタブ：ブラウザのセッションの保存領域に、置きます（ブラウザを閉じると、消えます）。"],
+      ["p", "このページは、Cookieを使いません。ブラウザの保存領域（localStorage）に、次の情報を保存します。どれも、この端末のブラウザを使える人だけが、見られます（サーバーには、送りません。ただし、名前・端末の番号・6文字は、操作のたびに、履歴の一部として、暗号化して送ります）。"],
+      ["b", "端末識別用のランダムな番号と、ランダムな英数字6文字（目的：履歴で、どの端末の操作かを区別するため）"],
+      ["b", "名前（目的：履歴や画面で、利用者を区別するため）"],
+      ["b", "同意の記録（目的：次回から、この画面を省くため）"],
+      ["b", "確認済みの端末の記録（目的：「知らない端末のお知らせ」で、確認した端末を覚えるため）"],
+      ["b", "表示の設定：キャラクターの、職業ごとの並び替え（目的：次回も、同じ表示にするため）"],
+      ["b", "ログイン情報（目的：次回から、パスワードの入力を省くため。「この端末にログインを保存する」を選んだときだけ保存します）。保存されるのは、パスワードそのものではなく、作戦を暗号化・復号するための鍵です。この端末のブラウザの保存データを見られる人は、パスワードなしで、このボードを開けます。共有のパソコンでは、選ばないでください。"],
+      ["b", "開いていたタブ（目的：再読み込みしても、同じ画面に戻るため）：ブラウザのセッションの保存領域に置き、ブラウザを閉じると、消えます。"],
       ["p", "ブラウザの保存データを消すと、これらは失われ、名前の再設定と、再ログインが必要になります。このとき、新しい端末として、履歴に記録され、ほかのメンバーの画面には、「知らない端末」のお知らせが出ます。サーバーに保存された情報は、消えません。"],
       ["p", "広告の配信や、アクセス解析のためのサービスは、使っていません。"]]],
-    ["3. 作戦データの保存と暗号化", [
-      ["p", "作戦の中身（BAN・PICK・メモ・ルールの設定・履歴の内容）は、パスワードから作った鍵で、あなたのブラウザの中で暗号化してから、Firebaseに保存します（鍵の作り方：PBKDF2-SHA256・60万回、暗号：AES-256-GCM）。パスワードや鍵を持たない人は、読めません。"],
+    ["3. サーバー（Firebase）に保存する情報", [
+      ["p", "次の情報を、サーバーに保存します。「URLを知る人」は、パスワードを知らなくても、読める人です。「運営者」は、Firebaseの管理画面や、管理用の権限で、読める人です。Google社も、サーバーを運営する立場で、取得できます。"],
+      ["b", "作戦の内容と履歴の内容（BAN・PICK・メモ・ルールの設定・操作の内容・名前と6文字・端末の番号・端末の種類）：パスワードから作った鍵で、ブラウザの中で暗号化してから、保存します（鍵の作り方：PBKDF2-SHA256・60万回、暗号：AES-256-GCM）。読めるのは、パスワードを知っているチームのメンバーだけです。暗号化されたままのデータは、URLを知る人、運営者、Google社も、取得できますが、読めません。"],
+      ["b", "履歴の件数と時刻（暗号化されません）：URLを知る人、運営者、Google社が、見られます。"],
+      ["b", "パスワード確認用のデータ（暗号化されません）：ランダムな値・計算の回数・確認用の暗号文・削除用の照合の値。URLを知る人、運営者、Google社が、見られます。これを使って、パスワードの推測を試せるので、推測されにくいパスワードにしてください。"],
+      ["b", "チームの情報（暗号化されません）：チームの名前。大会BOTのチームでは、さらに、選手名・ルール・キャラクターの設定。URLを知る人、運営者、Google社が、パスワードなしで、読めます。URLは、パスワードと同じように、秘密にしてください。"],
+      ["b", "削除の依頼（削除を押したときだけ、一時的に）：削除用の値と時刻。BOTが処理したあと、消します。"],
       ["p", "パスワードそのものは、サーバーに、送信も保存もしません。鍵は、ブラウザの中だけで使い、上の「ログインを保存」を選んだときだけ、この端末に保存します。"],
-      ["p", "次のものは、暗号化されません。URLを知っている人は、パスワードがなくても、読めます：チームの名前、（大会BOTのチームでは）大会名・選手名・ルール・キャラクターの設定、パスワード確認用のデータ、履歴の件数と時刻。パスワード確認用のデータを使って、パスワードの推測を試すことができるので、推測されにくいパスワードにしてください。"],
       ["p", "パスワードを忘れると、作戦データを読めなくなります。運営者も、パスワードを知らないので、再発行や、データの復元は、できません。パスワードは、大切に管理してください。"],
-      ["p", "暗号化は、端末のウイルス感染や、ページのコードの改ざんなど、あらゆる危険を防ぐものではありません。"]]],
+      ["p", "暗号化は、端末のウイルス感染や、ページのコードの改ざんなど、あらゆる危険を防ぐものではありません。また、通信先を限る設定は、通信先を限るだけで、通信先に渡る情報や、各社でのログの保存までは、制限できません。"]]],
     ["4. 操作履歴について", [
       ["p", "チーム内の操作を確認できるよう、訪問や編集の履歴を、保存します。履歴には、次の情報が含まれます。"],
       ["b", "操作の時刻（サーバーの時刻）"],
@@ -1358,11 +1384,12 @@
       ["b", "端末識別用の番号（画面には、先頭の6文字を表示）"],
       ["b", "端末の種類（OSとブラウザの名前）"],
       ["b", "操作の内容（どのキャラクターを入れた・外した、メモを書き換えた、など）"],
-      ["p", "履歴の内容は、暗号化されており、パスワードを知っているチームのメンバーだけが、見られます。誰が操作したかを、確認するために使います。"]]],
+      ["p", "時刻以外は、暗号化されており、パスワードを知っているチームのメンバー全員が、見られます。誰が操作したかを、確認するために使います。"]]],
     ["5. データの削除と管理", [
-      ["p", "チームのパスワードを知っている人は、「🕘 履歴・端末」の一番下から、パスワードを入れて、そのボードのデータ（作戦と履歴）を、削除できます（確認の画面が出ます）。削除したあとは、このページには表示されず、パスワードを入れても、「だれが、いつ削除したか」だけが、表示されます。"],
-      ["p", "ただし、この削除は、暗号化されたデータを、サーバーから消すものではありません（安全のためのルールで、ブラウザからは、サーバーのデータを消せないため）。暗号化されたデータは、サーバーに残ります。サーバーからも消したいときは、運営者に、依頼してください。チームの名前など、暗号化されていない情報（3.を参照）も、この削除では、消えません。"],
-      ["p", "パスワードは、チーム内で共有されるため、特定のメンバーだけが知っているとは限りません。信頼できる人にだけ、共有してください。パスワードを知らずに、URLだけを知っている人は、データの削除も、書き換えも、できません。"],
+      ["p", "チームのパスワードを知っている人は、「🕘 履歴・端末」の一番下から、パスワードを入れて、そのボードのデータ（作戦と履歴）を、削除できます（確認の画面が出ます）。削除すると、このページには表示されなくなり、運営のBOTが、サーバーの暗号化されたデータも、削除します（BOTが動いているとき、1分ほどで消えます）。削除後は、パスワードを入れても、「だれが、いつ削除したか」だけが、表示されます。"],
+      ["p", "削除してもサーバーに残るのは、次のものです：チームの情報とパスワード確認用のデータ（3.を参照。URLを知る人、運営者、Google社が見られます）、削除の記録（暗号化。パスワードを知る人だけが読めます）。BOTが止まっているときは、サーバーの暗号化されたデータの削除が、BOTが動くまで、遅れます。Google社での、バックアップやログへの残り方は、各社の方針に従います。"],
+      ["p", "削除の依頼は、パスワードから作った値で、本物かどうかを、BOTが確かめます。パスワードを知らずに、URLだけを知っている人は、データの削除も、書き換えも、できません。"],
+      ["p", "パスワードは、チーム内で共有されるため、特定のメンバーだけが知っているとは限りません。信頼できる人にだけ、共有してください。"],
       ["p", "ブラウザの保存データを消しても、サーバーのデータは、消えません。反対に、この削除機能を使っても、ブラウザの保存データ（名前や端末の番号など）は、消えません。"]]],
     ["6. 同意について", [
       ["p", "「同意して進む」を押すと、この説明を確認し、情報の取り扱いに同意したものとして、記録します。同意の記録は、このブラウザに保存され、次回からは、この画面を省きます（保存できない設定のブラウザでは、毎回、表示されます）。"],
