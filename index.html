@@ -125,8 +125,14 @@
   #gate h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: .04em; } #gate .tm { color: var(--sub); margin-bottom: 12px; font-size: 14px; }
   #gate label { display: block; margin: 10px 0 4px; font-size: 13px; color: var(--sub); }
   #gate input[type=password], #gate input[type=text] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; font-size: 16px; }
-  #gate .pw { position: relative; } #gate .pw input { padding-right: 64px; }
-  #gate .eye { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); padding: 5px 10px; font-size: 13px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  #gate .pw, #hist .pw { position: relative; } #gate .pw input, #hist .pw input { padding-right: 64px; width: 100%; }
+  #hist .danger { margin-top: 18px; border: 1px solid #ff3b52; border-radius: 8px; padding: 6px 12px 12px; font-size: 12.5px; line-height: 1.6; color: #ffc9ce; }
+  #hist .danger label { display: block; margin: 8px 0 4px; }
+  #hist .danger .del { margin-top: 10px; background: #c0182d; color: #fff; border: 0; border-radius: 6px; padding: 7px 16px; cursor: pointer; font: inherit; font-weight: 700; }
+  #hist .danger .del[disabled] { opacity: .5; cursor: wait; }
+  #hist .danger .dmsg { margin-top: 8px; min-height: 16px; color: #ff9aa5; }
+  #gate .eye, #hist .eye { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); padding: 5px 10px; font-size: 13px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+  #gate .welcome { color: #fff; line-height: 1.7; margin: 10px 0 4px; } #gate .welcome b { font-size: 17px; } #gate .welcome .steps { margin-top: 8px; font-size: 14px; }
   #gate .go { margin-top: 14px; width: 100%; padding: 11px; font-size: 16px; font-weight: 700; background: #2f7be0; border: 0; color: #fff; border-radius: 8px; cursor: pointer; }
   #gate .go[disabled] { opacity: .5; cursor: wait; }
   #gate .warn { background: #4a1219; border: 1px solid #ff3b52; color: #ffc9ce; border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.6; margin: 10px 0; }
@@ -173,7 +179,7 @@
   var ASSET = window.LAB_ASSET_BASE || "";                                    // キャラの顔の画像がある、大会のページの場所
   var $ = function (id) { return document.getElementById(id); };
   var META = null, STATE = {}, CH = {}, PLAYERS = [];
-  var KEY = null, SETUP = null, PENDING = [], HIST = [], SEEN_EVENTS = {};
+  var KEY = null, SETUP = null, PENDING = [], HIST = [], SEEN_EVENTS = {}, WIPED = null;       // WIPED＝データが削除されたとき、その記録
   var RAWMETA = null, FREE = false, RULEBUILT = "", FIRST_META = true;       // FREE＝大会BOTを使わない（だれでも作れる）チーム
   var cur = { tab: "fav", set: "1" };                       // tab："fav"（常用キャラ）か ラウンド番号。set：セットのキー
   var FACES = {};
@@ -237,8 +243,21 @@
     var br = /Edg\//.test(u) ? "Edge" : /OPR\//.test(u) ? "Opera" : /Chrome\//.test(u) ? "Chrome" : /Firefox\//.test(u) ? "Firefox" : /Safari\//.test(u) ? "Safari" : "?";
     return os + " / " + br;
   }
-  var DEV = (function () { try { return localStorage.getItem("lab_dev_name") || guessDevice(); } catch (e) { return guessDevice(); } })();
-  function saveDev(n) { DEV = n.slice(0, 30) || guessDevice(); try { localStorage.setItem("lab_dev_name", DEV); } catch (e) { /* 無視 */ } }
+  var TAG = (function () {                                                    // この端末だけの、ランダムな英数字6文字（名前のうしろに付く。端末ごとに違う。ブラウザのデータを消すと、変わる）
+    var a = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", t = "";
+    try { t = localStorage.getItem("lab_tag") || ""; } catch (e) { t = ""; }
+    if (!/^[A-Za-z0-9]{6}$/.test(t)) {
+      t = ""; while (t.length < 6) { var b = rand(1)[0]; if (b < 248) t += a[b % 62]; }
+      try { localStorage.setItem("lab_tag", t); } catch (e) { /* 無視 */ }
+    }
+    return t;
+  })();
+  var NAME = "";                                                              // 自分の名前（このボードでの名前。この端末に保存）
+  function cleanName(n) { return String(n || "").replace(/[\s#]+/g, " ").trim().slice(0, 12); }
+  function loadName() { try { NAME = cleanName(localStorage.getItem("lab_name_" + ID)); } catch (e) { NAME = ""; } return NAME; }
+  function lastName() { try { return cleanName(localStorage.getItem("lab_name_last")); } catch (e) { return ""; } }
+  function saveName(n) { NAME = cleanName(n); try { localStorage.setItem("lab_name_" + ID, NAME); localStorage.setItem("lab_name_last", NAME); } catch (e) { /* 無視 */ } }
+  function who() { return (NAME || "名無し") + "#" + TAG; }                    // 履歴に出る名前：自分の名前＋この端末の6文字
 
   // ───────── Firebase（読み：ストリーム／書き：追記だけ） ─────────
   function setPath(root, path, val) {
@@ -290,12 +309,16 @@
   var RAW = {}, EVT = {}, busy = false, again = false;
   var writeFailed = false;
   function applyOps(ops) { Object.keys(ops).forEach(function (p) { STATE = setPath(STATE, p, ops[p]); }); }
-  function sendEvent(ev) {
-    ev.i = uid(); ev.cid = CID; ev.n = DEV; ev.ts = Date.now();
-    PENDING.push(ev);
-    seal(ev).then(function (c) {
+  function postEvent(ev) {
+    return seal(ev).then(function (c) {
       return fetch(DBURL + "/log.json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ c: c, t: { ".sv": "timestamp" } }) });
-    }).then(function (r) { if (!r.ok) throw new Error(String(r.status)); writeFailed = false; showNotice(); })
+    }).then(function (r) { if (!r.ok) throw new Error(String(r.status)); });
+  }
+  function sendEvent(ev) {
+    ev.i = uid(); ev.cid = CID; ev.n = who(); ev.d = guessDevice(); ev.ts = Date.now();
+    if (WIPED) return ev;                                                      // 削除されたあとは、何も書かない
+    PENDING.push(ev);
+    postEvent(ev).then(function () { writeFailed = false; showNotice(); })
       .catch(function () { writeFailed = true; showNotice(); });
     return ev;
   }
@@ -318,19 +341,42 @@
     })();
   }
   function rebuild() {                                       // 全部の記録を、順番に重ねて、いまの状態を作る（同じ記録が2回あっても、1回だけ）
-    STATE = {}; HIST = []; SEEN_EVENTS = {};
+    STATE = {}; HIST = []; SEEN_EVENTS = {}; WIPED = null;
     Object.keys(EVT).sort().forEach(function (k) {
       var ev = EVT[k];
-      if (!ev || SEEN_EVENTS[ev.i]) return;
+      if (!ev || WIPED || SEEN_EVENTS[ev.i]) return;
       SEEN_EVENTS[ev.i] = 1;
+      if (ev.k === "wipe") {                                                     // データの削除：それまでの内容は、すべて無かったことにする（だれが削除したかだけを残す）
+        STATE = {}; HIST = [{ k: "wipe", cid: ev.cid, n: ev.n, t: ev._t || ev.ts, ev: ev }]; WIPED = HIST[0]; return;
+      }
       if (ev.k === "e" && ev.o && typeof ev.o === "object") applyOps(ev.o);
       HIST.push({ k: ev.k, cid: ev.cid, n: ev.n, t: ev._t || ev.ts, ev: ev });
     });
+    if (WIPED) { PENDING = []; showWiped(); return; }
     PENDING = PENDING.filter(function (ev) { return !SEEN_EVENTS[ev.i]; });
     PENDING.forEach(function (ev) { if (ev.k === "e") applyOps(ev.o); });
     if (RAWMETA) { if (!metaChanged() && META) fill(); }
     renderNewIds();
-    if (!$("hist").hidden) renderHist();
+    var busyHist = document.activeElement && $("hist").contains(document.activeElement) && document.activeElement !== $("hist");
+    if (!$("hist").hidden && !busyHist && histSig() !== HSIG) renderHist();      // 記録が増えたときだけ、作り直す（操作中は、作り直さない）
+  }
+  function showWiped() {
+    $("hist").hidden = true;
+    gate(function (c) {
+      brand(c, "このボードのデータは、削除されました");
+      var w = el("div", "warn");
+      w.appendChild(el("div", "", "🗑 削除した人：" + (WIPED.n || "?") + "（ID " + String(WIPED.cid || "").slice(0, 6) + "）　" + fmtTime(WIPED.t)));
+      w.appendChild(el("div", "", "削除されたデータは、このページには、二度と表示されません。復活できません。"));
+      w.appendChild(el("div", "", (RAWMETA && RAWMETA.mode === "free")
+        ? "次回からは、新しい作戦ボードを作って、ご利用ください。"
+        : "次回からは、新しいURLを作り直して、ご利用ください（チーム専用チャンネルの「🔄 URLを作り直す」。リーダーか管理者が押せます）。"));
+      c.appendChild(w);
+      if (RAWMETA && RAWMETA.mode === "free") {
+        var nb = el("button", "go", "新しい作戦ボードを作る"); nb.type = "button";
+        nb.addEventListener("click", function () { location.href = location.pathname; });
+        c.appendChild(nb);
+      }
+    });
   }
 
   // ───────── 知らない端末のお知らせ ─────────
@@ -388,14 +434,15 @@
         if (!PW_RULE.test(a)) { m.textContent = "パスワードは、英大文字・英小文字・数字を、すべて使った、10〜20文字の英数字にしてください。"; return; }
         if (a !== b) { m.textContent = "2つのパスワードが、同じではありません。"; return; }
         go.disabled = true; m.textContent = "鍵を作っています…（数秒かかります）";
-        var salt = b64(rand(16)), iter = 600000;
+        var salt = b64(rand(16)), iter = 600000, chk = null;
         deriveKey(a, salt, iter).then(function (key) {
           KEY = key;
           return seal({ chk: "IDV-TEAM-LAB", v: 1 });
         }).then(function (check) {
+          chk = check;
           return fetch(DBURL + "/setup.json", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ salt: salt, iter: iter, check: check, t: { ".sv": "timestamp" } }) });
         }).then(function (r) {
-          if (r.ok) { SETUP = { salt: salt, iter: iter }; unlock(false); return; }
+          if (r.ok) { SETUP = { salt: salt, iter: iter, check: chk }; unlock(false); return; }
           KEY = null; go.disabled = false;
           m.textContent = r.status === 401 || r.status === 403 ? "すでに、ほかの人がパスワードを決めています。このページを開き直して、そのパスワードでログインしてください。" : "保存できませんでした（" + r.status + "）。";
         }).catch(function () { KEY = null; go.disabled = false; m.textContent = "つながりませんでした。通信を確認して、もう一度お試しください。"; });
@@ -444,7 +491,32 @@
       return unseal(setup.check, key).then(function (o) { if (o && o.chk === "IDV-TEAM-LAB") { KEY = key; SETUP = setup; return true; } return false; });
     }).catch(function () { return false; });
   }
+  function askName(done) {                                                      // パスワードのあとに、自分の名前を決める（名前＋この端末の6文字が、履歴に出る）
+    gate(function (c) {
+      brand(c, "あなたの名前を決めてください");
+      var w = el("div", "warn");
+      ["履歴には、「あなたの名前＋ランダムな英数字6文字」（例：" + "たろう#" + TAG + "）が出ます。",
+       "6文字は、この端末だけのものです。同じ名前の人が、別の端末で開いても、6文字は変わります。ブラウザのデータを消すと、新しい6文字になります。",
+       "訪問や編集の履歴は、チームの全員が見られます。"]
+        .forEach(function (x) { w.appendChild(el("div", "", "・" + x)); });
+      c.appendChild(w);
+      var nm = field(c, "名前（12文字まで）", "text"); nm.maxLength = 12; nm.value = lastName();
+      var m = msgBox(c);
+      var go = el("button", "go", "この名前で、はじめる"); go.type = "button"; c.appendChild(go);
+      var st = el("div", "rules", "このページは、Cookieを使いません。ブラウザの保存領域（localStorage）に、この端末の識別用の番号・6文字・あなたの名前を保存します（ログインを保存するときだけ、ログイン情報も保存します）。広告や、アクセス解析は、使っていません。アクセスすると、ページを置いているGitHubと、データを置いているFirebase（Google）に、通信の情報（IPアドレスなど）が、届きます。");
+      c.appendChild(st);
+      function ok() {
+        var v = cleanName(nm.value);
+        if (!v) { m.textContent = "名前を入れてください。"; return; }
+        saveName(v); done();
+      }
+      go.addEventListener("click", ok);
+      nm.addEventListener("keydown", function (e) { if (e.key === "Enter") ok(); });
+      setTimeout(function () { nm.focus(); }, 50);
+    });
+  }
   function unlock() {
+    if (!loadName()) { askName(unlock); return; }
     $("gate").hidden = true; $("stage").hidden = false;
     fit();
     stream("meta", onMeta);
@@ -459,13 +531,20 @@
   function showLanding() {
     gate(function (c) {
       brand(c, "チームだけで使う、試合前の作戦ボード");
-      var w = el("div", "warn");
-      ["大会BOT（Discord）のチームの方は、チーム専用チャンネルにピン留めされた、IDV TEAM LABのリンクから、開いてください（ここで作る必要は、ありません）。",
-       "大会BOTを使っていないチームは、下から、新しい作戦ボードを作れます。ルールは、自分で入れます。",
-       "作ると、あなたのチームだけの**URL**ができます。パスワードは、このあと決めます。",
-       "URLとパスワードは、かならず大切に保存し、決して、チームの外に流出させないでください。URLをなくすと、同じボードには入れなくなります。"]
-        .forEach(function (x) { var p = el("div"); p.textContent = "・" + x.replace(/\*\*/g, ""); w.appendChild(p); });
+      var w = el("div", "warn");                                                      // ここだけ赤
+      w.textContent = "※大会の番人BOT（Discord）をご利用の方は、チーム専用チャンネルにピン留めされたIDV TEAM LABのリンクから開いてください。";
       c.appendChild(w);
+      var hi = el("div", "welcome");                                                  // 以下は、白い文字
+      hi.appendChild(el("b", "", "IDV TEAM LABへようこそ！"));
+      hi.appendChild(el("div", "", "ここはあなた方チームの秘密のラボです。"));
+      var ol = el("div", "steps");
+      ["新しい作戦ボードを作るを押すと、あなたのチームだけのURLが生成されます。",
+       "パスワードを設定し、URLとパスワードをチームメンバーに共有してください。",
+       "URLとパスワードは大切に保存し、決してチームの外に流出させないでください。",
+       "URLをなくすとそのボードには入れなくなります。"]
+        .forEach(function (x, i) { ol.appendChild(el("div", "", (i + 1) + ". " + x)); });
+      hi.appendChild(ol);
+      c.appendChild(hi);
       var nm = field(c, "チームの名前（20文字まで）", "text"); nm.maxLength = 20;
       var m = msgBox(c);
       var go = el("button", "go", "新しい作戦ボードを作る"); go.type = "button"; c.appendChild(go);
@@ -561,20 +640,25 @@
   }
   function describeEvent(h) {
     if (h.k === "v") return "ページを開いた";
+    if (h.k === "wipe") return "データを削除した";
     if (h.k !== "e") return "?";
     var ops = h.ev.o || {}, keys = Object.keys(ops);
     return keys.slice(0, 3).map(function (k) { return describeOp(k, ops[k]); }).join(" ／ ") + (keys.length > 3 ? " ほか" : "");
   }
   function openHist() { renderHist(); $("hist").hidden = false; }
+  var HSIG = "";
+  function histSig() { return HIST.length + ":" + (HIST.length ? HIST[HIST.length - 1].ev.i : ""); }
   function renderHist() {
+    HSIG = histSig();
     var c = $("histCard"); c.textContent = "";
     c.appendChild(el("h2", "", "🕘 履歴・端末"));
     c.appendChild(el("div", "note", "このページのURLとパスワードは、大切に保存してください。決して、チームの外の人に教えないでください（流出すると、作戦が盗まれます）。URLをなくしたときは、新しいページを作り直すことになります。パスワードは、変えられません。"));
-    var row = el("div", "row"); row.appendChild(document.createTextNode("この端末の名前："));
-    var inp = el("input"); inp.value = DEV; inp.maxLength = 30; row.appendChild(inp);
-    var sv = el("button", "btn", "保存"); sv.type = "button"; sv.addEventListener("click", function () { saveDev(inp.value); sv.textContent = "保存しました（次に開いたときから、履歴に出ます）"; });
+    var row = el("div", "row"); row.appendChild(document.createTextNode("あなたの名前："));
+    var inp = el("input"); inp.value = NAME; inp.maxLength = 12; row.appendChild(inp);
+    var sv = el("button", "btn", "保存"); sv.type = "button";
+    sv.addEventListener("click", function () { if (!cleanName(inp.value)) { sv.textContent = "名前を入れてください"; return; } saveName(inp.value); sv.textContent = "保存しました（これから、「" + who() + "」と出ます）"; });
     row.appendChild(sv);
-    row.appendChild(el("span", "", "　この端末のID：" + CID.slice(0, 6)));
+    row.appendChild(el("span", "", "　履歴に出る名前：" + who() + "　／　この端末のID：" + CID.slice(0, 6)));
     var close = el("button", "btn", "閉じる"); close.type = "button"; close.style.marginLeft = "auto"; close.addEventListener("click", function () { $("hist").hidden = true; });
     row.appendChild(close);
     c.appendChild(row);
@@ -582,14 +666,14 @@
     var devs = {};
     HIST.forEach(function (h) {
       var d = devs[h.cid] || (devs[h.cid] = { cid: h.cid, n: h.n, first: h.t, last: h.t, visits: 0, edits: 0 });
-      d.n = h.n || d.n; if (h.t < d.first) d.first = h.t; if (h.t > d.last) d.last = h.t;
+      d.n = h.n || d.n; d.d = (h.ev && h.ev.d) || d.d; if (h.t < d.first) d.first = h.t; if (h.t > d.last) d.last = h.t;
       if (h.k === "v") d.visits++; else d.edits++;
     });
     c.appendChild(el("h3", "", "このページを開いた端末（ID）"));
-    var t1 = el("table"), hd = el("tr"); ["端末", "ID", "はじめて", "さいごに", "訪問", "編集"].forEach(function (x) { hd.appendChild(el("th", "", x)); }); t1.appendChild(hd);
+    var t1 = el("table"), hd = el("tr"); ["名前", "ID", "はじめて", "さいごに", "訪問", "編集"].forEach(function (x) { hd.appendChild(el("th", "", x)); }); t1.appendChild(hd);
     Object.keys(devs).sort(function (a, b) { return devs[a].first - devs[b].first; }).forEach(function (k) {
       var d = devs[k], tr = el("tr");
-      [d.n || "?", d.cid.slice(0, 6) + (d.cid === CID ? "（この端末）" : ""), fmtTime(d.first), fmtTime(d.last), String(d.visits), String(d.edits)].forEach(function (x) { tr.appendChild(el("td", "", x)); });
+      [(d.n || "?") + (d.d ? "（" + d.d + "）" : ""), d.cid.slice(0, 6) + (d.cid === CID ? "（この端末）" : ""), fmtTime(d.first), fmtTime(d.last), String(d.visits), String(d.edits)].forEach(function (x) { tr.appendChild(el("td", "", x)); });
       t1.appendChild(tr);
     });
     c.appendChild(t1);
@@ -604,6 +688,25 @@
     });
     c.appendChild(t2);
     if (HIST.length > 300) c.appendChild(el("div", "hint", "古い記録は、省略しています（全部、Firebaseに残っています）。"));
+    // データの削除（パスワードが要る）
+    var dz = el("div", "danger"); dz.appendChild(el("h3", "", "🗑 データの削除"));
+    dz.appendChild(el("div", "", "パスワードを入力すると、このボードのデータを、すべて削除できます。削除すると、このページには、二度と表示されません（復活できません）。そのあとは、パスワードを入力しても、「だれが削除したか」だけが表示されます。削除したあとは、新しいURLを作り直してご利用ください。"));
+    var dpw = field(dz, "パスワード");
+    var del = el("button", "del", "データを削除する"); del.type = "button"; dz.appendChild(del);
+    var dmsg = el("div", "dmsg"); dz.appendChild(dmsg);
+    del.addEventListener("click", function () {
+      if (!dpw.value) { dmsg.textContent = "パスワードを入れてください。"; return; }
+      del.disabled = true; dmsg.textContent = "確認しています…（数秒かかります）";
+      deriveKey(dpw.value, SETUP.salt, SETUP.iter).then(function (key) { return unseal(SETUP.check, key); }).then(function (o) {
+        if (!o || o.chk !== "IDV-TEAM-LAB") { del.disabled = false; dmsg.textContent = "パスワードが違います。"; return undefined; }
+        if (!window.confirm("このボードのデータを、すべて削除します。元に戻せません。本当に、削除しますか？")) { del.disabled = false; dmsg.textContent = ""; return undefined; }
+        dmsg.textContent = "削除しています…";
+        return postEvent({ k: "wipe", i: uid(), cid: CID, n: who(), d: guessDevice(), ts: Date.now() }).then(function () {
+          dmsg.textContent = "削除しました。";                                    // このあと、みんなの画面が、削除済みの表示に変わる
+        }, function () { del.disabled = false; dmsg.textContent = "削除できませんでした（通信を確認して、もう一度）。"; });
+      }).catch(function () { del.disabled = false; dmsg.textContent = "確認できませんでした。"; });
+    });
+    c.appendChild(dz);
   }
   $("histBtn").addEventListener("click", openHist);
 
