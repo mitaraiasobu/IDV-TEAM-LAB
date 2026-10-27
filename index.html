@@ -1,0 +1,1210 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https: data:; connect-src https://*.firebasedatabase.app https://*.firebaseio.com https://*.github.io; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>IDV TEAM LAB</title>
+<!-- IDV TEAM LAB：チームだけで使う、試合前の作戦ボード（みんなで同時に編集できる）。大会BOTとは別のサイト。
+     ・URLの # のあとの文字（チームごとのランダムな24文字）を知っている人だけが、このチームの場所を開ける。
+     ・開くには、チームで決めた「パスワード」が要る。パスワードは、ブラウザの中だけで使い、どこにも送らない・保存しない（GitHubにも、Firebaseにも、入らない）。
+     ・作戦の中身は、パスワードから作った鍵で、ブラウザの中で暗号化（AES-256-GCM）してから、Firebaseに送る。Firebaseに置かれるのは暗号文だけなので、パスワードを知らない人は、読めない。
+     ・履歴（訪問・編集）は、追記だけで、消せない・書き換えられない（Firebaseのルール）。端末ごとのID（ブラウザに作る）が入るので、知らない端末が開くと、お知らせが出る。
+     ・パスワードは、最初に1回だけ決める（英大文字・小文字・数字、10〜20文字）。あとから変えることはできない。
+     ・キャラの顔の画像は、大会のページ（window.LAB_ASSET_BASE）のものを読む。
+     ・中身（キャラ・名札・ドラッグ・職業の並び替え・スマホの回転）は、大会BOTの作戦ボードと同じ。 -->
+<style>
+  :root { --bg: #0f1218; --panel: #181d27; --panel2: #202735; --line: #2f394d; --text: #e8ecf4; --sub: #93a0b8;
+          --h: #d8334a; --h2: #7d1b29; --s: #2f7be0; --s2: #173d73; --gold: #ffd23f; --ok: #3ecf8e; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", system-ui, sans-serif; }
+  #stage { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; transform-origin: 0 0; }
+  header { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; padding: 10px 16px 6px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header .sub { color: var(--sub); font-size: 13px; }
+  #status { margin-left: auto; font-size: 12px; color: var(--sub); }
+  #status.ok { color: var(--ok); } #status.ng { color: #ff7a85; }
+  nav { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 16px; }
+  nav button { appearance: none; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 7px 14px; border-radius: 8px 8px 0 0;
+               font: inherit; font-size: 14px; cursor: pointer; }
+  nav button.on { background: var(--panel2); border-color: #6f84ad; border-bottom-color: var(--panel2); font-weight: 700; }
+  #tabs2 button { font-size: 13px; padding: 5px 12px; }
+  #notice { margin: 4px 16px; font-size: 13px; }
+  #notice .bar { padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; }
+  #notice .bad { background: #4a1219; border: 1px solid #ff3b52; color: #ffb3bb; animation: blink 1s steps(2, start) infinite; }
+  #notice .req { background: #4a3d0a; border: 1px solid var(--gold); color: #ffe48a; }
+  #notice .err { background: #3a2a10; border: 1px solid #e0a030; color: #ffd28a; }
+  main { flex: 1; min-height: 0; display: flex; gap: 12px; padding: 8px 16px 12px; align-items: stretch; }
+  #pal { flex: 0 0 330px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  #pal.drop-ok { outline: 2px dashed var(--sub); }
+  #pal h3 { margin: 0 2px; font-size: 13px; color: var(--sub); flex: none; }
+  #pal input { width: 100%; flex: none; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 13px; }
+  #pal .hint { flex: none; margin: 0; }
+  .palbox { flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }     /* ハンターの名札置き場と、サバイバーの名札置き場は、別々にスクロール */
+  .palbox.h { border-top: 2px solid var(--h); } .palbox.s { border-top: 2px solid var(--s); }
+  .palopt { flex: none; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sub); margin: 0 2px; cursor: pointer; user-select: none; }
+  #pal .palopt input { width: auto; flex: none; padding: 0; accent-color: var(--s); }
+  .palopt { white-space: nowrap; }
+  .rolehd { margin: 6px 2px 3px; font-size: 12px; font-weight: 700; color: #9cc4ff; border-bottom: 1px solid var(--s2); }
+  .rolehd:first-child { margin-top: 0; }
+  #work { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; padding-bottom: 20px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 5px; }
+  /* 名札：顔 + 名前 を、枠で囲む。ハンターは赤、サバイバーは青 */
+  .tag { width: 66px; border: 2px solid; border-radius: 8px; padding: 3px 2px 2px; text-align: center; cursor: grab; user-select: none; -webkit-user-select: none;
+         touch-action: pan-y; position: relative; background: var(--panel2); }
+  .tag.h { border-color: var(--h); background: linear-gradient(180deg, #3a1219, var(--h2)); }
+  .tag.s { border-color: var(--s); background: linear-gradient(180deg, #11274a, var(--s2)); }
+  .tag .face { width: 56px; height: 56px; margin: 0 auto; border-radius: 6px; background-repeat: no-repeat; background-color: rgba(0,0,0,.35);
+               display: flex; align-items: center; justify-content: center; font-size: 26px; }
+  .tag .nm { font-size: 10.5px; line-height: 1.15; margin-top: 2px; word-break: break-all; min-height: 24px; display: flex; align-items: center; justify-content: center; }
+  .tag.sel { outline: 3px solid #fff; }
+  .tag.req { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 12px 2px rgba(255,210,63,.75); }
+  .tag.req .nm { color: var(--gold); font-weight: 700; }
+  .tag.bad { border-color: #ff2b45; animation: blinkTag 4s step-end infinite; }                    /* 使用禁止：枠線だけ、ゆっくり点滅（フェードなし） */
+  .tag.locked { cursor: default; opacity: .92; }
+  .tag.dim { opacity: .35; }
+  .tag .x { position: absolute; right: -6px; top: -7px; width: 18px; height: 18px; line-height: 16px; border-radius: 50%; background: #000; color: #fff; border: 1px solid #888;
+            font-size: 11px; padding: 0; cursor: pointer; display: none; }
+  .tag:hover .x, .tag.sel .x { display: block; }
+  @media (hover: none) { .tag .x { display: block; } }
+  @keyframes blink { 50% { opacity: .35; } }
+  .drop.exact { border: 2px solid #2f9bff; }                                                                /* 人数がピッタリ揃ったとき：枠線に、青いライン */
+  @keyframes blinkTag { 0% { border-color: #ff2b45; } 50% { border-color: #4a1219; } }
+  .ghost { position: fixed; z-index: 99999; pointer-events: none; opacity: .9; transform: translate(-50%, -60%) scale(1.08); }
+  .ghost.rot { transform: translate(-50%, -60%) rotate(90deg) scale(var(--gs, 1.08)); }
+  /* 常用キャラ */
+  .players { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .box { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; min-height: 120px; }
+  .box h4 { margin: 0 0 6px; font-size: 14px; display: flex; justify-content: space-between; gap: 8px; }
+  .box h4 small { color: var(--sub); font-weight: 400; }
+  .drop { min-height: 84px; border-radius: 8px; padding: 4px; background: rgba(255,255,255,.03); border: 1px dashed var(--line);
+          display: flex; flex-wrap: wrap; gap: 5px; align-content: flex-start; }          /* 入れた名札は、横に並べる（入りきらなければ、次の段） */
+  .drop.over { background: rgba(255,255,255,.12); border-color: #fff; }
+  .drop.off { display: block; background: repeating-linear-gradient(45deg, #1a1f29, #1a1f29 8px, #141820 8px, #141820 16px); border-style: solid; color: var(--sub); font-size: 12px; text-align: center; padding-top: 28px; }
+  .drop.empty::before { content: attr(data-hint); color: #5d6a82; font-size: 12px; align-self: center; }
+  /* セット */
+  #corners { display: flex; gap: 12px; flex-wrap: nowrap; }
+  .corner { flex: 1 1 0; background: var(--panel); border: 2px solid; border-radius: 12px; padding: 8px 10px 10px; min-width: 0; }
+  .corner.s { border-color: var(--s); } .corner.h { border-color: var(--h); }
+  .corner > h3 { margin: 0 0 6px; font-size: 16px; }
+  .corner.s > h3 { color: #7eb4ff; } .corner.h > h3 { color: #ff8896; }
+  .blk { margin-top: 8px; }
+  .blk h4 { margin: 0 0 4px; font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
+  .blk h4 small { color: var(--sub); font-weight: 400; font-size: 11px; }
+  .blk h4 .cnt { margin-left: auto; font-weight: 400; color: var(--sub); font-size: 12px; }
+  .blk h4 .cnt.over { color: #ff7a85; font-weight: 700; }
+  .blk.gb .drop { background: rgba(160,120,255,.07); border-color: #6b57a8; }
+  #memo { margin-top: 12px; }
+  #memo textarea { width: 100%; min-height: 110px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: inherit; resize: vertical; }
+  .hint { color: var(--sub); font-size: 12px; margin: 4px 0; }
+  /* スマホを縦に持っているとき（画面を回して使うとき）は、縦の高さが少ないので、上の部分を小さくする */
+  html.rot header { padding: 4px 12px 2px; gap: 8px; } html.rot header h1 { font-size: 15px; } html.rot header .sub { display: none; }
+  html.rot nav { padding: 2px 12px; gap: 4px; } html.rot nav button { padding: 4px 10px; font-size: 12px; } html.rot #tabs2 button { font-size: 12px; padding: 3px 9px; }
+  html.rot #notice { margin: 2px 12px; font-size: 12px; } html.rot #notice .bar { padding: 3px 8px; margin-bottom: 2px; }
+  html.rot main { padding: 4px 12px 8px; gap: 8px; } html.rot #pal { flex-basis: 290px; padding: 6px; } html.rot #pal .hint { display: none; }
+  html.rot .corner { padding: 6px 8px 8px; } html.rot .corner > h3 { margin-bottom: 2px; font-size: 14px; } html.rot .blk { margin-top: 4px; } html.rot .drop { min-height: 76px; }
+  html.rot #memo textarea { min-height: 70px; }
+  .empty-msg { color: var(--sub); padding: 30px; text-align: center; }
+  /* ルール設定 */
+  .rules .sec { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+  .rules h4 { margin: 0 0 6px; font-size: 14px; } .rules h5 { margin: 8px 0 4px; font-size: 13px; color: #9cc4ff; }
+  .rules select, .rules input[type=text] { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font: inherit; font-size: 13px; }
+  .rules table { border-collapse: collapse; font-size: 13px; } .rules td, .rules th { padding: 3px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+  .rules .ropt { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 13px; cursor: pointer; }
+  .rules .plist { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .rules .off { color: var(--sub); }
+  .rules ul { margin: 4px 0 4px 18px; padding: 0; font-size: 13px; }
+  #notice .newid { background: #3a2a10; border: 1px solid #ff9f1a; color: #ffd28a; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  #notice .newid button, .btn { appearance: none; border: 1px solid #6f84ad; background: var(--panel2); color: var(--text); padding: 4px 12px; border-radius: 6px; font: inherit; font-size: 12px; cursor: pointer; }
+  header .hbtn { margin-left: 6px; }
+  #stage[hidden], #gate[hidden], #hist[hidden] { display: none; }
+  #gate { position: fixed; inset: 0; overflow: auto; background: var(--bg); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; z-index: 50; }
+  #gate .card { width: min(560px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 20px 16px; }
+  #gate h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: .04em; } #gate .tm { color: var(--sub); margin-bottom: 12px; font-size: 14px; }
+  #gate label { display: block; margin: 10px 0 4px; font-size: 13px; color: var(--sub); }
+  #gate input[type=password], #gate input[type=text] { width: 100%; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; font-size: 16px; }
+  #gate .go { margin-top: 14px; width: 100%; padding: 11px; font-size: 16px; font-weight: 700; background: #2f7be0; border: 0; color: #fff; border-radius: 8px; cursor: pointer; }
+  #gate .go[disabled] { opacity: .5; cursor: wait; }
+  #gate .warn { background: #4a1219; border: 1px solid #ff3b52; color: #ffc9ce; border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.6; margin: 10px 0; }
+  #gate .warn b { color: #fff; }
+  #gate .msg { margin-top: 10px; min-height: 18px; color: #ff9aa5; font-size: 13px; }
+  #gate .opt { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--sub); }
+  #gate .rules { font-size: 12px; color: var(--sub); margin-top: 4px; }
+  #hist { position: fixed; inset: 0; z-index: 40; background: rgba(5,8,14,.86); overflow: auto; padding: 14px; }
+  #hist .card { max-width: 900px; margin: 0 auto; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  #hist h2 { margin: 0 0 6px; font-size: 18px; } #hist h3 { margin: 14px 0 6px; font-size: 14px; color: var(--sub); }
+  #hist table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  #hist td, #hist th { border-bottom: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: top; }
+  #hist th { color: var(--sub); font-weight: 600; }
+  #hist .kv { color: #9cc4ff; } #hist .ke { color: #ffd98a; }
+  #hist .note { font-size: 12.5px; line-height: 1.6; color: #ffc9ce; background: #4a1219; border: 1px solid #ff3b52; border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+  #hist .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; font-size: 13px; }
+  #hist input { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; }
+</style>
+</head>
+<body>
+<script>window.LAB_DB_URL = "https://idv-team-lab-default-rtdb.asia-southeast1.firebasedatabase.app"; window.LAB_ASSET_BASE = "https://mitaraiasobu.github.io/IDV-tournament-BOT-brows/"; window.LAB_CHARS = {"chars":{"h":[{"id":54,"n":"復讐者","e":"🔥","i":"Hunter/HellEmber.webp"},{"id":55,"n":"道化師","e":"🚀","i":"Hunter/SmileyFace.webp"},{"id":56,"n":"断罪狩人","e":"🦌","i":"Hunter/Gamekeeper.webp"},{"id":57,"n":"リッパー","e":"✂","i":"Hunter/Jack_The_Ripper.webp"},{"id":58,"n":"結魂者","e":"🕸️","i":"Hunter/SoulWeaver.webp"},{"id":59,"n":"芸者","e":"🦋","i":"Hunter/Geisha.webp"},{"id":60,"n":"白黒無常","e":"☂","i":"Hunter/WuChang.webp"},{"id":61,"n":"写真家","e":"📷","i":"Hunter/Joseph%3B_smoother.webp"},{"id":62,"n":"狂眼","e":"🍺","i":"Hunter/MadEyes.webp"},{"id":63,"n":"黄衣の王","e":"🐙","i":"Hunter/TheFeaster.webp"},{"id":64,"n":"夢の魔女","e":"🐍","i":"Hunter/DreamWitch.webp"},{"id":65,"n":"泣き虫","e":"😭","i":"Hunter/AxeBoy.webp"},{"id":66,"n":"魔トカゲ","e":"🦎","i":"Hunter/EvilReptilian.webp"},{"id":67,"n":"血の女王","e":"👑","i":"Hunter/BloodyQueen.webp"},{"id":68,"n":"ガードNo.26","e":"💣","i":"Hunter/Guard26.webp"},{"id":69,"n":"使徒","e":"🐈","i":"Hunter/Disciple.webp"},{"id":70,"n":"ヴァイオリニスト","e":"🎻","i":"Hunter/Violinist.webp"},{"id":71,"n":"彫刻師","e":"🗿","i":"Hunter/Sculptor.webp"},{"id":72,"n":"アンデッド","e":"🧟","i":"Hunter/Undead.webp"},{"id":73,"n":"破輪","e":"☸️","i":"Hunter/TheBreakingWheel.webp"},{"id":74,"n":"漁師","e":"🧜‍♀️","i":"Hunter/Naiad.webp"},{"id":75,"n":"蝋人形師","e":"🕯","i":"Hunter/WaxArtist.webp"},{"id":76,"n":"悪夢","e":"🐓","i":"Hunter/Nightmare.webp"},{"id":77,"n":"書記官","e":"📜","i":"Hunter/Clerk.webp"},{"id":78,"n":"隠者","e":"⚡","i":"Hunter/Hermit.webp"},{"id":79,"n":"夜の番人","e":"🌪","i":"Hunter/NightWatch.webp"},{"id":80,"n":"フールズ・ゴールド","e":"⛏","i":"Hunter/FoolsGold.webp"},{"id":81,"n":"オペラ歌手","e":"🎤","i":"Hunter/OperaSinger.webp"},{"id":82,"n":"時空の影","e":"👻","i":"Hunter/TheShadow.webp"},{"id":83,"n":"足萎えの羊","e":"🐑","i":"Hunter/Goatman.webp"},{"id":84,"n":"フラバルー","e":"🎈","i":"Hunter/Hullabaloo.webp"},{"id":85,"n":"雑貨商","e":"🧺","i":"Hunter/Peddler.webp"},{"id":86,"n":"ビリヤードプレイヤー","e":"🎱","i":"Hunter/Cueist.webp"},{"id":87,"n":"女王蜂","e":"🐝","i":"Hunter/QueenBee.webp"},{"id":88,"n":"歯医者","e":"🦷","i":"Hunter/Dentist.webp"},{"id":89,"n":"心の獣","e":"🐺","i":"Hunter/Herztier.webp"}],"s":[{"id":1,"n":"幸運児","e":"🍀","i":"survivor/LuckyGuy.webp"},{"id":2,"n":"医師","e":"💉","i":"survivor/Doctor.webp"},{"id":3,"n":"弁護士","e":"⚖️","i":"survivor/Lawyer.webp"},{"id":4,"n":"空軍","e":"🔫","i":"survivor/Coordinator.webp"},{"id":5,"n":"庭師","e":"🌷","i":"survivor/Gardener.webp"},{"id":6,"n":"泥棒","e":"🔦","i":"survivor/Thief.webp"},{"id":7,"n":"傭兵","e":"🤕","i":"survivor/Mercenary.webp"},{"id":8,"n":"調香師","e":"🧴","i":"survivor/Perfumer.webp"},{"id":9,"n":"占い師","e":"🦉","i":"survivor/Seer.webp"},{"id":10,"n":"マジシャン","e":"🪄","i":"survivor/Magician.webp"},{"id":11,"n":"カウボーイ","e":"🤠","i":"survivor/Cowboy.webp"},{"id":12,"n":"冒険家","e":"📙","i":"survivor/Explorer.webp"},{"id":13,"n":"祭司","e":"🔯","i":"survivor/Priestess.webp"},{"id":14,"n":"機械技師","e":"🤖","i":"survivor/Mechanic.webp"},{"id":15,"n":"オフェンス","e":"🏈","i":"survivor/Forward.webp"},{"id":16,"n":"心眼","e":"👁️","i":"survivor/TheMindsEye.webp"},{"id":17,"n":"踊り子","e":"🩰","i":"survivor/FemaleDancer.webp"},{"id":18,"n":"納棺師","e":"⚰️","i":"survivor/Embalmer.webp"},{"id":19,"n":"探鉱者","e":"🧲","i":"survivor/Prospector.webp"},{"id":20,"n":"呪術師","e":"🔮","i":"survivor/Enchantress.webp"},{"id":21,"n":"野人","e":"🐗","i":"survivor/Wildling.webp"},{"id":22,"n":"曲芸師","e":"🤹","i":"survivor/Acrobat.webp"},{"id":23,"n":"一等航海士","e":"⚓","i":"survivor/FirstOfficer.webp"},{"id":24,"n":"バーメイド","e":"🥂","i":"survivor/Barmaid.webp"},{"id":25,"n":"ポストマン","e":"✉","i":"survivor/Postman.webp"},{"id":26,"n":"墓守","e":"🪦","i":"survivor/GraveKeeper.webp"},{"id":27,"n":"囚人","e":"⛓️","i":"survivor/Prisoner.webp"},{"id":28,"n":"昆虫学者","e":"🐛","i":"survivor/Entomologist.webp"},{"id":29,"n":"画家","e":"🎨","i":"survivor/Painter.webp"},{"id":30,"n":"バッツマン","e":"🏏","i":"survivor/Batter.webp"},{"id":31,"n":"玩具職人","e":"🧸","i":"survivor/ToyMerchant.webp"},{"id":32,"n":"患者","e":"❤️‍🩹","i":"survivor/Patient.webp"},{"id":33,"n":"心理学者","e":"❤","i":"survivor/Psychologist.webp"},{"id":34,"n":"小説家","e":"✍️","i":"survivor/Novelist.webp"},{"id":35,"n":"少女","e":"🎀","i":"survivor/LittleGirl.webp"},{"id":36,"n":"泣きピエロ","e":"🤡","i":"survivor/WeepingClown.webp"},{"id":37,"n":"教授","e":"🧪","i":"survivor/Professor.webp"},{"id":38,"n":"骨董商","e":"🪈","i":"survivor/Antiquarian.webp"},{"id":39,"n":"作曲家","e":"🎼","i":"survivor/Composer.webp"},{"id":40,"n":"記者","e":"📷","i":"survivor/Journalist.webp"},{"id":41,"n":"航空エンジニア","e":"🛩️","i":"survivor/Aeroplanist.webp"},{"id":42,"n":"応援団","e":"📣","i":"survivor/Cheerleader.webp"},{"id":43,"n":"人形師","e":"🎎","i":"survivor/Puppeteer.webp"},{"id":44,"n":"火災調査員","e":"🚒","i":"survivor/FireInvestigator.webp"},{"id":45,"n":"レディ・ファウロ","e":"🎲","i":"survivor/FaroLady.webp"},{"id":46,"n":"騎士","e":"⚔️","i":"survivor/Knight.webp"},{"id":47,"n":"気象学者","e":"🌦️","i":"survivor/Meteorologist.webp"},{"id":48,"n":"弓使い","e":"🏹","i":"survivor/Archer.webp"},{"id":49,"n":"脱出マスター","e":"🔓","i":"survivor/Escapologist.webp"},{"id":50,"n":"幻灯師","e":"🎞","i":"survivor/Lanternist.webp"},{"id":51,"n":"闘牛士","e":"🐂","i":"survivor/Matador.webp"},{"id":52,"n":"マイムアーティスト","e":"🎭","i":"survivor/MimeArtist.webp"},{"id":53,"n":"神童","e":"🌼","i":"survivor/Prodigy.webp"}]},"roles":[{"k":"decode","n":"解読職","e":"🔧","ids":[3,12,14,16,27,39,45]},{"k":"rescue","n":"救助職","e":"🚀","ids":[4,7,15,18,21,23,26,30,32,33,36,40,41,43,46,49,53]},{"k":"harass","n":"牽制職","e":"👟","ids":[1,2,5,6,7,8,10,11,13,17,19,20,22,24,28,29,31,32,33,37,38,41,42,43,44,47,48,50,51,52,53]},{"k":"support","n":"補助職","e":"🤝","ids":[2,5,9,11,13,15,17,18,19,20,21,24,25,27,28,29,30,31,33,34,35,36,37,42,44,47,49,50,51,52,53]}]};</script>
+<div id="gate"><div class="card" id="gateCard"></div></div>
+<div id="hist" hidden><div class="card" id="histCard"></div></div>
+<div id="stage" hidden>
+<header>
+  <h1 id="ttl">IDV TEAM LAB</h1><span class="sub" id="sub"></span>
+  <button class="btn hbtn" id="histBtn" type="button">🕘 履歴・端末</button><span id="status">接続中…</span>
+</header>
+<nav id="tabs1"></nav>
+<nav id="tabs2"></nav>
+<div id="notice"></div>
+<main>
+  <aside id="pal"></aside>
+  <section id="work"></section>
+</main>
+</div>
+<script>
+(function () {
+  "use strict";
+  var ID = (location.hash || "").replace(/^#/, "");                          // チームごとのランダムな24文字（# のあとなので、サーバーには送られない）
+  var DBURL = (window.LAB_DB_URL || "").replace(/\/+$/, "") + "/lab/" + ID;
+  function useId(id) { ID = id; DBURL = (window.LAB_DB_URL || "").replace(/\/+$/, "") + "/lab/" + ID; }
+  var LABCHARS = window.LAB_CHARS || null;                                    // 大会BOTを使わないチーム用の、キャラの一覧（ページを公開するときに、BOTが埋め込む）
+  var ASSET = window.LAB_ASSET_BASE || "";                                    // キャラの顔の画像がある、大会のページの場所
+  var $ = function (id) { return document.getElementById(id); };
+  var META = null, STATE = {}, CH = {}, PLAYERS = [];
+  var KEY = null, SETUP = null, PENDING = [], HIST = [], SEEN_EVENTS = {};
+  var RAWMETA = null, FREE = false, RULEBUILT = "", FIRST_META = true;       // FREE＝大会BOTを使わない（だれでも作れる）チーム
+  var cur = { tab: "fav", set: "1" };                       // tab："fav"（常用キャラ）か ラウンド番号。set：セットのキー
+  var FACES = {};
+  var sel = null;                                            // クリックで持ち上げている名札 { id, from }
+
+  // スマホを縦に持っているときは、PCと同じ見た目の画面（幅1200）を90度回して、横向きに使う画面にする（画面の縦＝画面の横幅1200）
+  var ROT = false, ROT_SCALE = 1;
+  function fit() {
+    var st = $("stage"), W = window.innerWidth, H = window.innerHeight;
+    ROT = W / Math.max(1, H) < 1.25 && W < 900;
+    document.documentElement.classList.toggle("rot", ROT);
+    if (ROT) {
+      var LW = 1200, LH = Math.round(LW * W / H);
+      ROT_SCALE = H / LW;
+      st.style.width = LW + "px"; st.style.height = LH + "px";
+      st.style.transform = "translate(" + W + "px,0) rotate(90deg) scale(" + ROT_SCALE + ")";
+    } else {
+      ROT_SCALE = 1;
+      st.style.width = ""; st.style.height = ""; st.style.transform = "";
+    }
+  }
+  window.addEventListener("resize", fit);
+  window.addEventListener("orientationchange", function () { setTimeout(fit, 150); });
+  fit();
+
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function setStatus(txt, cls) { var s = $("status"); s.textContent = txt; s.className = cls || ""; }
+  function imgUrl(p) { return ASSET + p.split("/").map(encodeURIComponent).join("/"); }
+  function obj(o) { return o && typeof o === "object" ? o : {}; }
+
+  // ───────── 暗号（パスワードから鍵を作る。暗号化・復号は、このブラウザの中だけ） ─────────
+  var enc = new TextEncoder(), dec = new TextDecoder();
+  function rand(n) { return crypto.getRandomValues(new Uint8Array(n)); }
+  function hex(a) { return Array.prototype.map.call(a, function (x) { return (x < 16 ? "0" : "") + x.toString(16); }).join(""); }
+  function b64(buf) { var a = new Uint8Array(buf), s = ""; for (var i = 0; i < a.length; i++) s += String.fromCharCode(a[i]); return btoa(s); }
+  function unb64(s) { var bin = atob(s), a = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a; }
+  function deriveKey(pw, saltB64, iter) {
+    return crypto.subtle.importKey("raw", enc.encode(pw), "PBKDF2", false, ["deriveKey"]).then(function (base) {
+      return crypto.subtle.deriveKey({ name: "PBKDF2", salt: unb64(saltB64), iterations: iter, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, true, ["encrypt", "decrypt"]);
+    });
+  }
+  function seal(o) {                                                         // 暗号化：12バイトのIV + 暗号文。このチームのIDを、改ざん検出に含める
+    var iv = rand(12);
+    return crypto.subtle.encrypt({ name: "AES-GCM", iv: iv, additionalData: enc.encode(ID) }, KEY, enc.encode(JSON.stringify(o))).then(function (ct) {
+      var all = new Uint8Array(12 + ct.byteLength); all.set(iv, 0); all.set(new Uint8Array(ct), 12); return b64(all);
+    });
+  }
+  function unseal(c, key) {                                                  // 復号：パスワードが違う・改ざんされた・他人が書いたゴミは、null
+    try {
+      var all = unb64(c);
+      return crypto.subtle.decrypt({ name: "AES-GCM", iv: all.slice(0, 12), additionalData: enc.encode(ID) }, key || KEY, all.slice(12))
+        .then(function (pt) { return JSON.parse(dec.decode(pt)); }, function () { return null; });
+    } catch (e) { return Promise.resolve(null); }
+  }
+  function uid() { return hex(rand(10)); }
+  var CID = (function () {                                                   // この端末（ブラウザ）のID。ブラウザのデータを消すと、新しいIDになる
+    try { var v = localStorage.getItem("lab_cid"); if (!v) { v = hex(rand(16)); localStorage.setItem("lab_cid", v); } return v; } catch (e) { return hex(rand(16)); }
+  })();
+  function guessDevice() {
+    var u = navigator.userAgent || "", os = /Windows/.test(u) ? "Windows" : /iPhone|iPad/.test(u) ? "iOS" : /Android/.test(u) ? "Android" : /Mac OS/.test(u) ? "Mac" : /Linux/.test(u) ? "Linux" : "?";
+    var br = /Edg\//.test(u) ? "Edge" : /OPR\//.test(u) ? "Opera" : /Chrome\//.test(u) ? "Chrome" : /Firefox\//.test(u) ? "Firefox" : /Safari\//.test(u) ? "Safari" : "?";
+    return os + " / " + br;
+  }
+  var DEV = (function () { try { return localStorage.getItem("lab_dev_name") || guessDevice(); } catch (e) { return guessDevice(); } })();
+  function saveDev(n) { DEV = n.slice(0, 30) || guessDevice(); try { localStorage.setItem("lab_dev_name", DEV); } catch (e) { /* 無視 */ } }
+
+  // ───────── Firebase（読み：ストリーム／書き：追記だけ） ─────────
+  function setPath(root, path, val) {
+    if (path === "/" || path === "") return val;
+    var segs = path.split("/").filter(Boolean);
+    if (segs.some(function (s) { return s === "__proto__" || s === "constructor" || s === "prototype"; })) return root;       // 悪い名前の項目は、無視する
+    if (root === null || typeof root !== "object") root = {};
+    var node = root;
+    for (var i = 0; i < segs.length - 1; i++) {
+      if (node[segs[i]] === null || typeof node[segs[i]] !== "object") node[segs[i]] = {};
+      node = node[segs[i]];
+    }
+    var last = segs[segs.length - 1];
+    if (val === null) delete node[last]; else node[last] = val;
+    return root;
+  }
+  function problem(msg) {
+    if (META) return;
+    var w = $("work"); w.textContent = "";
+    w.appendChild(el("div", "empty-msg", msg));
+  }
+  var DENIED = "読み取りが許可されていません。Firebaseの「ルール」が、IDV TEAM LABの設定になっていない可能性があります。管理者に伝えてください。";
+  var WAITING = "BOTが、このチームの場所を、まだ用意していません。しばらくしてから、開き直してください。";
+  function stream(name, onData) {
+    var data = null, url = DBURL + "/" + name + ".json", es = null, poll = null;
+    function emit() { onData(data); }
+    function pollOnce() {
+      fetch(url + "?t=" + Date.now(), { cache: "no-store" }).then(function (r) {
+        if (r.status === 401 || r.status === 403) { setStatus("× 読み取れません", "ng"); problem(DENIED); return undefined; }
+        if (!r.ok) { setStatus("× つながっていません（" + r.status + "）", "ng"); return undefined; }
+        return r.json().then(function (j) { data = j; emit(); setStatus("● 同期中（ポーリング）", "ok"); if (name === "meta" && j == null) problem(WAITING); });
+      }).catch(function () { setStatus("× つながっていません", "ng"); });
+    }
+    function startPoll() { if (poll) return; pollOnce(); poll = setInterval(pollOnce, 3000); }
+    if (!window.EventSource) { startPoll(); return; }
+    es = new EventSource(url);
+    es.addEventListener("put", function (e) { var d = JSON.parse(e.data); data = setPath(data, d.path, d.data); emit(); setStatus("● 同期中", "ok"); if (name === "meta" && data == null) problem(WAITING); });
+    es.addEventListener("patch", function (e) {
+      var d = JSON.parse(e.data);
+      Object.keys(d.data || {}).forEach(function (k) { data = setPath(data, (d.path === "/" ? "" : d.path) + "/" + k, d.data[k]); });
+      emit();
+    });
+    es.addEventListener("cancel", function () { setStatus("× 読み取れません", "ng"); problem(DENIED); });
+    es.addEventListener("auth_revoked", function () { setStatus("× 読み取れません", "ng"); problem(DENIED); });
+    es.onerror = function () { setStatus("再接続中…", "ng"); if (es.readyState === 2) { es.close(); startPoll(); } };
+  }
+
+  // ───────── 追記ログ：編集・訪問の1回ごとに、暗号化した1件を足す（あとから消せない・書き換えられない） ─────────
+  var RAW = {}, EVT = {}, busy = false, again = false;
+  var writeFailed = false;
+  function applyOps(ops) { Object.keys(ops).forEach(function (p) { STATE = setPath(STATE, p, ops[p]); }); }
+  function sendEvent(ev) {
+    ev.i = uid(); ev.cid = CID; ev.n = DEV; ev.ts = Date.now();
+    PENDING.push(ev);
+    seal(ev).then(function (c) {
+      return fetch(DBURL + "/log.json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ c: c, t: { ".sv": "timestamp" } }) });
+    }).then(function (r) { if (!r.ok) throw new Error(String(r.status)); writeFailed = false; showNotice(); })
+      .catch(function () { writeFailed = true; showNotice(); });
+    return ev;
+  }
+  function write(ops) { applyOps(ops); if (!metaChanged()) fill(); sendEvent({ k: "e", o: ops }); }
+  function writeQuiet(ops) { applyOps(ops); metaChanged(); sendEvent({ k: "e", o: ops }); }        // メモ・選手の名前：自分の入力欄を作り直さずに書く
+  function onLog(data) {
+    RAW = data || {};
+    if (busy) { again = true; return; }
+    busy = true;
+    (function loop() {
+      again = false;
+      var keys = Object.keys(RAW).sort(), todo = keys.filter(function (k) { return !(k in EVT); });
+      var chain = Promise.resolve();
+      todo.forEach(function (k) {
+        chain = chain.then(function () {
+          return unseal(RAW[k] && RAW[k].c).then(function (ev) { EVT[k] = ev && ev.i ? ev : false; if (EVT[k]) EVT[k]._t = RAW[k].t; });
+        });
+      });
+      chain.then(function () { rebuild(); if (again) loop(); else busy = false; });
+    })();
+  }
+  function rebuild() {                                       // 全部の記録を、順番に重ねて、いまの状態を作る（同じ記録が2回あっても、1回だけ）
+    STATE = {}; HIST = []; SEEN_EVENTS = {};
+    Object.keys(EVT).sort().forEach(function (k) {
+      var ev = EVT[k];
+      if (!ev || SEEN_EVENTS[ev.i]) return;
+      SEEN_EVENTS[ev.i] = 1;
+      if (ev.k === "e" && ev.o && typeof ev.o === "object") applyOps(ev.o);
+      HIST.push({ k: ev.k, cid: ev.cid, n: ev.n, t: ev._t || ev.ts, ev: ev });
+    });
+    PENDING = PENDING.filter(function (ev) { return !SEEN_EVENTS[ev.i]; });
+    PENDING.forEach(function (ev) { if (ev.k === "e") applyOps(ev.o); });
+    if (RAWMETA) { if (!metaChanged() && META) fill(); }
+    renderNewIds();
+    if (!$("hist").hidden) renderHist();
+  }
+
+  // ───────── 知らない端末のお知らせ ─────────
+  function seenList() { try { return JSON.parse(localStorage.getItem("lab_seen_" + ID) || "[]"); } catch (e) { return []; } }
+  function saveSeen(list) { try { localStorage.setItem("lab_seen_" + ID, JSON.stringify(list)); } catch (e) { /* 無視 */ } }
+  function newIds() {
+    var seen = seenList(), out = {};
+    HIST.forEach(function (h) { if (h.cid && h.cid !== CID && seen.indexOf(h.cid) < 0 && !out[h.cid]) out[h.cid] = h; });
+    return Object.keys(out).map(function (c) { return out[c]; });
+  }
+  function renderNewIds() { showNotice(); }
+
+  // ───────── ログイン画面 ─────────
+  var PW_RULE = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[A-Za-z0-9]{10,20}$/;
+  function gate(build) { var c = $("gateCard"); c.textContent = ""; build(c); $("gate").hidden = false; }
+  function brand(c, sub) { c.appendChild(el("h1", "", "🧪 IDV TEAM LAB")); c.appendChild(el("div", "tm", sub || "")); }
+  function msgBox(c) { var m = el("div", "msg"); c.appendChild(m); return m; }
+  function field(c, label, type) { c.appendChild(el("label", "", label)); var i = el("input"); i.type = type || "password"; i.autocomplete = "off"; i.spellcheck = false; c.appendChild(i); return i; }
+  function gateError(text) { gate(function (c) { brand(c, ""); c.appendChild(el("div", "warn", text)); }); }
+  function getRaw(path) { return fetch(DBURL + "/" + path + ".json?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json().then(function (j) { return { status: r.status, ok: r.ok, data: j }; }); }); }
+
+  function showSetup(metaTeam, withUrl) {
+    gate(function (c) {
+      brand(c, (metaTeam || "") + "｜はじめに、パスワードを決めてください");
+      if (withUrl) {                                                                // このURLが、このボードの、ただ1つの入り口
+        var u = el("div", "warn"), pu = el("div"); pu.textContent = "このボードのURL（ほかの人には、見せないでください）：";
+        var inp0 = el("input"); inp0.type = "text"; inp0.readOnly = true; inp0.value = location.href; inp0.style.cssText = "width:100%;margin:6px 0;font-size:12px;background:#000;color:#fff;border:1px solid #888;border-radius:6px;padding:6px";
+        var cp = el("button", "btn", "URLをコピー"); cp.type = "button";
+        cp.addEventListener("click", function () { inp0.select(); try { document.execCommand("copy"); cp.textContent = "コピーしました"; } catch (e) { /* 無視 */ } });
+        u.appendChild(pu); u.appendChild(inp0); u.appendChild(cp);
+        u.appendChild(el("div", "", "このURLが、このボードに入る、ただ1つの鍵です。メモなどに、かならず、保存してください。"));
+        c.appendChild(u);
+      }
+      var w = el("div", "warn");
+      [["このページを開くための「パスワード」を、はじめに1回だけ決めます。", false],
+       ["パスワードは、あとから変えられません。", true],
+       ["このページのURLとパスワードは、メモなどに大切に保存してください。URLをなくすと、同じページには入れなくなり、新しいページを作り直すことになります（今までの作戦は、読めなくなります）。", false],
+       ["URLとパスワードは、チームの外の人に、決して教えないでください。流出すると、作戦が盗まれます。", true],
+       ["パスワードは、このブラウザの中だけで使われます。運営（BOT）も、GitHubも、Firebaseも、パスワードを知りません。忘れても、取り戻せません。", false]]
+        .forEach(function (x) { var p = el("div"); if (x[1]) { var b = el("b", "", x[0]); p.appendChild(b); } else p.textContent = "・" + x[0]; if (x[1]) p.insertBefore(document.createTextNode("・"), p.firstChild); w.appendChild(p); });
+      c.appendChild(w);
+      var p1 = field(c, "パスワード（英大文字・小文字・数字を、すべて使って、10〜20文字）");
+      var p2 = field(c, "もう一度、同じパスワード");
+      c.appendChild(el("div", "rules", "使える文字：半角の英大文字・英小文字・数字だけ。記号・空白は使えません。"));
+      var m = msgBox(c);
+      var go = el("button", "go", "パスワードを決めて、はじめる"); go.type = "button"; c.appendChild(go);
+      go.addEventListener("click", function () {
+        var a = p1.value, b = p2.value;
+        if (!PW_RULE.test(a)) { m.textContent = "パスワードは、英大文字・英小文字・数字を、すべて使った、10〜20文字の英数字にしてください。"; return; }
+        if (a !== b) { m.textContent = "2つのパスワードが、同じではありません。"; return; }
+        go.disabled = true; m.textContent = "鍵を作っています…（数秒かかります）";
+        var salt = b64(rand(16)), iter = 600000;
+        deriveKey(a, salt, iter).then(function (key) {
+          KEY = key;
+          return seal({ chk: "IDV-TEAM-LAB", v: 1 });
+        }).then(function (check) {
+          return fetch(DBURL + "/setup.json", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ salt: salt, iter: iter, check: check, t: { ".sv": "timestamp" } }) });
+        }).then(function (r) {
+          if (r.ok) { SETUP = { salt: salt, iter: iter }; unlock(false); return; }
+          KEY = null; go.disabled = false;
+          m.textContent = r.status === 401 || r.status === 403 ? "すでに、ほかの人がパスワードを決めています。このページを開き直して、そのパスワードでログインしてください。" : "保存できませんでした（" + r.status + "）。";
+        }).catch(function () { KEY = null; go.disabled = false; m.textContent = "つながりませんでした。通信を確認して、もう一度お試しください。"; });
+      });
+    });
+  }
+  var tries = 0;
+  function showLogin(setup, metaTeam, note) {
+    gate(function (c) {
+      brand(c, (metaTeam || "") + "｜パスワードを入れてください");
+      if (note) c.appendChild(el("div", "warn", note));
+      var p1 = field(c, "パスワード");
+      var m = msgBox(c);
+      var opt = el("label", "opt"), cb = el("input"); cb.type = "checkbox";
+      opt.appendChild(cb); opt.appendChild(document.createTextNode("この端末にログインを保存する（自分だけが使う端末だけ。共有のPCでは、チェックしないでください）"));
+      c.appendChild(opt);
+      var go = el("button", "go", "ログイン"); go.type = "button"; c.appendChild(go);
+      c.appendChild(el("div", "rules", "パスワードを忘れたり、URLをなくしたときは、取り戻せません。新しいページを作り直してください（BOTの案内を見てください）。"));
+      function attempt() {
+        if (!p1.value) return;
+        go.disabled = true; m.textContent = "確認しています…（数秒かかります）";
+        deriveKey(p1.value, setup.salt, setup.iter).then(function (key) {
+          return unseal(setup.check, key).then(function (o) {
+            if (o && o.chk === "IDV-TEAM-LAB") { KEY = key; SETUP = setup; return afterLogin(cb.checked); }
+            tries++;
+            setTimeout(function () { go.disabled = false; m.textContent = "パスワードが違います。"; }, Math.min(5000, 800 * tries));
+            return undefined;
+          });
+        }).catch(function () { go.disabled = false; m.textContent = "確認できませんでした。"; });
+      }
+      go.addEventListener("click", attempt);
+      p1.addEventListener("keydown", function (e) { if (e.key === "Enter") attempt(); });
+      setTimeout(function () { p1.focus(); }, 50);
+    });
+  }
+  function afterLogin(save) {
+    if (save) { crypto.subtle.exportKey("jwk", KEY).then(function (j) { try { localStorage.setItem("lab_key_" + ID, JSON.stringify(j)); } catch (e) { /* 無視 */ } }); }
+    unlock(false);
+    return undefined;
+  }
+  function tryStoredKey(setup) {
+    var raw = null;
+    try { raw = localStorage.getItem("lab_key_" + ID); } catch (e) { /* 無視 */ }
+    if (!raw) return Promise.resolve(false);
+    return crypto.subtle.importKey("jwk", JSON.parse(raw), { name: "AES-GCM" }, true, ["encrypt", "decrypt"]).then(function (key) {
+      return unseal(setup.check, key).then(function (o) { if (o && o.chk === "IDV-TEAM-LAB") { KEY = key; SETUP = setup; return true; } return false; });
+    }).catch(function () { return false; });
+  }
+  function unlock() {
+    $("gate").hidden = true; $("stage").hidden = false;
+    fit();
+    stream("meta", onMeta);
+    stream("log", onLog);
+    sendEvent({ k: "v" });                                                    // 訪問の記録（この端末のIDと、端末の名前）
+  }
+  function randomId() {                                                               // 暗号用の乱数で、24文字（英大文字・小文字・数字）
+    var a = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789", out = "";
+    while (out.length < 24) { var b = rand(1)[0]; if (b < 248) out += a[b % 62]; }
+    return out;
+  }
+  function showLanding() {
+    gate(function (c) {
+      brand(c, "チームだけで使う、試合前の作戦ボード");
+      var w = el("div", "warn");
+      ["大会BOT（Discord）のチームの方は、チーム専用チャンネルにピン留めされた、IDV TEAM LABのリンクから、開いてください（ここで作る必要は、ありません）。",
+       "大会BOTを使っていないチームは、下から、新しい作戦ボードを作れます。ルールは、自分で入れます。",
+       "作ると、あなたのチームだけの**URL**ができます。パスワードは、このあと決めます。",
+       "URLとパスワードは、かならず大切に保存し、決して、チームの外に流出させないでください。URLをなくすと、同じボードには入れなくなります。"]
+        .forEach(function (x) { var p = el("div"); p.textContent = "・" + x.replace(/\*\*/g, ""); w.appendChild(p); });
+      c.appendChild(w);
+      var nm = field(c, "チームの名前（20文字まで）", "text"); nm.maxLength = 20;
+      var m = msgBox(c);
+      var go = el("button", "go", "新しい作戦ボードを作る"); go.type = "button"; c.appendChild(go);
+      go.addEventListener("click", function () {
+        var team = nm.value.trim();
+        if (!team) { m.textContent = "チームの名前を入れてください。"; return; }
+        if (!window.crypto || !crypto.subtle) { m.textContent = "このブラウザでは、暗号が使えません（https:// のURLで、新しいブラウザで開いてください）。"; return; }
+        go.disabled = true; m.textContent = "作っています…";
+        var id = randomId();
+        fetch(DBURLFor(id) + "/meta.json", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "free", team: team, v: 1, t: { ".sv": "timestamp" } }) }).then(function (r) {
+          if (!r.ok) { go.disabled = false; m.textContent = r.status === 401 || r.status === 403 ? "作れませんでした（Firebaseのルールの設定が違います）。" : "作れませんでした（" + r.status + "）。"; return; }
+          useId(id); location.hash = id; boot();
+        }).catch(function () { go.disabled = false; m.textContent = "つながりませんでした。通信を確認して、もう一度お試しください。"; });
+      });
+    });
+  }
+  function DBURLFor(id) { return (window.LAB_DB_URL || "").replace(/\/+$/, "") + "/lab/" + id; }
+  function boot() {
+    if (!ID) { showLanding(); return; }
+    if (!/^[A-Za-z0-9]{24,40}$/.test(ID)) { gateError("このページのURLが正しくありません。チーム専用チャンネルにピン留めされた、IDV TEAM LABのリンクから開いてください。"); return; }
+    if (!window.crypto || !crypto.subtle) { gateError("このブラウザ、または、この接続では、暗号を使えません（https:// のURLで、新しいブラウザで開いてください）。"); return; }
+    Promise.all([getRaw("setup"), getRaw("meta/team")]).then(function (r) {
+      var setup = r[0], team = r[1];
+      if (setup.status === 401 || setup.status === 403) { gateError(DENIED); return; }
+      if (!setup.ok || !team.ok) { gateError("つながりませんでした。通信を確認して、開き直してください。"); return; }
+      if (!window.LAB_DB_URL) { gateError("このページの設定が、足りません（Firebaseの場所）。"); return; }
+      if (team.data == null) { gateError("このURLのチームの場所が、見つかりません。URLが間違っているか、BOTがまだ用意していません。"); return; }
+      if (setup.data == null) { showSetup(String(team.data), true); return; }
+      tryStoredKey(setup.data).then(function (ok) { if (ok) unlock(); else showLogin(setup.data, String(team.data)); });
+    }).catch(function () { gateError("つながりませんでした。通信を確認して、開き直してください。"); });
+  }
+
+  // ───────── 画像（顔の切り出し） ─────────
+  var IMGS = {};
+  function loadImg(src, cb) {
+    var c = IMGS[src];
+    if (c) { if (c.done) cb(c); else c.cbs.push(cb); return; }
+    c = IMGS[src] = { cbs: [cb], done: false };
+    var im = new Image();
+    im.onload = function () { c.done = true; c.ok = true; c.w = im.naturalWidth; c.h = im.naturalHeight; c.cbs.forEach(function (f) { f(c); }); c.cbs = []; };
+    im.onerror = function () { c.done = true; c.ok = false; c.cbs.forEach(function (f) { f(c); }); c.cbs = []; };
+    im.src = imgUrl(src);
+  }
+  function paintFace(box, ch, S) {
+    if (!ch.i) { box.textContent = ch.e || ch.n.slice(0, 1); return; }
+    loadImg(ch.i, function (c) {
+      if (!c.ok) { box.textContent = ch.e || ch.n.slice(0, 1); return; }
+      var f = FACES[ch.i], L, cx, cy;
+      if (f) { L = Math.max(1, f.r * c.h * 2.5); cx = f.cx * c.w; cy = f.cy * c.h; }       // 登録された頭の円を中心に切り出す
+      else { L = c.h * 0.42; cx = c.w / 2; cy = c.h * 0.2; }                                // 登録がなければ、上のほうの真ん中
+      var sc = S / L;
+      box.textContent = "";
+      box.style.backgroundImage = 'url("' + imgUrl(ch.i) + '")';
+      box.style.backgroundSize = (c.w * sc) + "px " + (c.h * sc) + "px";
+      box.style.backgroundPosition = (S / 2 - cx * sc) + "px " + (S / 2 - cy * sc) + "px";
+    });
+  }
+  function makeTag(ch, opt) {
+    opt = opt || {};
+    var t = el("div", "tag " + ch.f);
+    t.setAttribute("data-id", ch.id);
+    var face = el("div", "face");
+    t.appendChild(face);
+    t.appendChild(el("div", "nm", ch.n));
+    paintFace(face, ch, 56);
+    if (opt.req) t.classList.add("req");
+    if (opt.bad) t.classList.add("bad");
+    if (opt.locked) t.classList.add("locked");
+    if (opt.onRemove) {
+      var x = el("button", "x", "×");
+      x.title = "外す";
+      x.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+      x.addEventListener("click", function (e) { e.stopPropagation(); opt.onRemove(); });
+      t.appendChild(x);
+    }
+    return t;
+  }
+
+  // ───────── 履歴・端末 ─────────
+  function fmtTime(t) { if (!t) return ""; var d = new Date(t); return d.getFullYear() + "/" + (d.getMonth() + 1) + "/" + d.getDate() + " " + ("0" + d.getHours()).slice(-2) + ":" + ("0" + d.getMinutes()).slice(-2) + ":" + ("0" + d.getSeconds()).slice(-2); }
+  function describeOp(path, val) {
+    var p = path.split("/"), add = val !== null && val !== undefined;
+    function ch(id) { return CH[id] ? CH[id].n : "キャラ" + id; }
+    if (p[0] === "rules") return "ルール設定を変えた";
+    if (p[0] === "fav") { var pl = PLAYERS.filter(function (x) { return String(x.id) === p[1]; })[0]; return "常用キャラ：" + (pl ? pl.n : "選手") + (add ? " に " : " から ") + ch(p[2]) + (add ? " を入れた" : " を外した"); }
+    if (p[0] === "sets") {
+      var sid = (p[1] || "").split("_"), r = (META && META.rounds || []).filter(function (x) { return String(x.no) === sid[0]; })[0];
+      var s = r ? (r.sets || []).filter(function (x) { return x.k === sid[1]; })[0] : null, where = (r ? r.name : "") + (s ? " " + s.label : "");
+      if (p[2] === "memo") return where + "：メモを書き換えた";
+      return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (p[3] === "ban" ? "BAN" : "PICK") + (add ? " に " : " から ") + ch(p[4]) + (add ? " を入れた" : " を外した");
+    }
+    return path;
+  }
+  function describeEvent(h) {
+    if (h.k === "v") return "ページを開いた";
+    if (h.k !== "e") return "?";
+    var ops = h.ev.o || {}, keys = Object.keys(ops);
+    return keys.slice(0, 3).map(function (k) { return describeOp(k, ops[k]); }).join(" ／ ") + (keys.length > 3 ? " ほか" : "");
+  }
+  function openHist() { renderHist(); $("hist").hidden = false; }
+  function renderHist() {
+    var c = $("histCard"); c.textContent = "";
+    c.appendChild(el("h2", "", "🕘 履歴・端末"));
+    c.appendChild(el("div", "note", "このページのURLとパスワードは、大切に保存してください。決して、チームの外の人に教えないでください（流出すると、作戦が盗まれます）。URLをなくしたときは、新しいページを作り直すことになります。パスワードは、変えられません。"));
+    var row = el("div", "row"); row.appendChild(document.createTextNode("この端末の名前："));
+    var inp = el("input"); inp.value = DEV; inp.maxLength = 30; row.appendChild(inp);
+    var sv = el("button", "btn", "保存"); sv.type = "button"; sv.addEventListener("click", function () { saveDev(inp.value); sv.textContent = "保存しました（次に開いたときから、履歴に出ます）"; });
+    row.appendChild(sv);
+    row.appendChild(el("span", "", "　この端末のID：" + CID.slice(0, 6)));
+    var close = el("button", "btn", "閉じる"); close.type = "button"; close.style.marginLeft = "auto"; close.addEventListener("click", function () { $("hist").hidden = true; });
+    row.appendChild(close);
+    c.appendChild(row);
+    // 端末の一覧
+    var devs = {};
+    HIST.forEach(function (h) {
+      var d = devs[h.cid] || (devs[h.cid] = { cid: h.cid, n: h.n, first: h.t, last: h.t, visits: 0, edits: 0 });
+      d.n = h.n || d.n; if (h.t < d.first) d.first = h.t; if (h.t > d.last) d.last = h.t;
+      if (h.k === "v") d.visits++; else d.edits++;
+    });
+    c.appendChild(el("h3", "", "このページを開いた端末（ID）"));
+    var t1 = el("table"), hd = el("tr"); ["端末", "ID", "はじめて", "さいごに", "訪問", "編集"].forEach(function (x) { hd.appendChild(el("th", "", x)); }); t1.appendChild(hd);
+    Object.keys(devs).sort(function (a, b) { return devs[a].first - devs[b].first; }).forEach(function (k) {
+      var d = devs[k], tr = el("tr");
+      [d.n || "?", d.cid.slice(0, 6) + (d.cid === CID ? "（この端末）" : ""), fmtTime(d.first), fmtTime(d.last), String(d.visits), String(d.edits)].forEach(function (x) { tr.appendChild(el("td", "", x)); });
+      t1.appendChild(tr);
+    });
+    c.appendChild(t1);
+    c.appendChild(el("h3", "", "訪問・編集の履歴（新しい順。消せません）"));
+    var t2 = el("table"), h2 = el("tr"); ["時刻", "端末", "内容"].forEach(function (x) { h2.appendChild(el("th", "", x)); }); t2.appendChild(h2);
+    HIST.slice().reverse().slice(0, 300).forEach(function (h) {
+      var tr = el("tr");
+      tr.appendChild(el("td", "", fmtTime(h.t)));
+      tr.appendChild(el("td", "", (h.n || "?") + "（" + (h.cid || "").slice(0, 6) + "）"));
+      tr.appendChild(el("td", h.k === "v" ? "kv" : "ke", (h.k === "v" ? "👣 " : "✏ ") + describeEvent(h)));
+      t2.appendChild(tr);
+    });
+    c.appendChild(t2);
+    if (HIST.length > 300) c.appendChild(el("div", "hint", "古い記録は、省略しています（全部、Firebaseに残っています）。"));
+  }
+  $("histBtn").addEventListener("click", openHist);
+
+  // ───────── 現在のラウンド・セット ─────────
+  function isRoundTab() { return cur.tab !== "fav" && cur.tab !== "rules"; }
+  function curRound() { return META && isRoundTab() ? (META.rounds || []).filter(function (r) { return String(r.no) === String(cur.tab); })[0] : null; }
+  function curSet() { var r = curRound(); return r ? (r.sets || []).filter(function (s) { return s.k === cur.set; })[0] || r.sets[0] : null; }
+  function setId() { var r = curRound(), s = curSet(); return r && s ? r.no + "_" + s.k : null; }
+  function setState() { return obj(obj(STATE.sets)[setId()]); }
+
+  // ───────── タブ ─────────
+  function buildTabs() {
+    var t1 = $("tabs1"); t1.textContent = "";
+    function tab(label, on, fn) { var b = el("button", on ? "on" : "", label); b.addEventListener("click", fn); return b; }
+    t1.appendChild(tab("📐 ルール設定", cur.tab === "rules", function () { go("rules"); }));
+    t1.appendChild(tab("⭐ 常用キャラ", cur.tab === "fav", function () { go("fav"); }));
+    (META.rounds || []).forEach(function (r) { t1.appendChild(tab(r.name, String(cur.tab) === String(r.no), function () { go(r.no); })); });
+    var t2 = $("tabs2"); t2.textContent = "";
+    var r = curRound();
+    if (r) (r.sets || []).forEach(function (s) { t2.appendChild(tab(s.label, s.k === (curSet() || {}).k, function () { go(r.no, s.k); })); });
+  }
+  function go(tab, set) {
+    cur.tab = tab;
+    if (set) cur.set = set; else if (isRoundTab()) { var r = curRound(); cur.set = r && r.sets[0] ? r.sets[0].k : "1"; }
+    try { sessionStorage.setItem("lab_tab_" + ID, JSON.stringify(cur)); } catch (e) { /* 無視 */ }
+    sel = null;
+    buildAll();
+  }
+
+  // ───────── 名札のドラッグ ─────────
+  var drag = null;
+  function dropTargetAt(x, y) {
+    var e = document.elementFromPoint(x, y);
+    return e ? e.closest("[data-drop],#pal") : null;
+  }
+  function attachTag(node, ch, from) {
+    node.addEventListener("pointerdown", function (e) {
+      if (e.button != null && e.button > 0) return;
+      var st = { ch: ch, from: from, x: e.clientX, y: e.clientY, started: false, node: node, pid: e.pointerId, touch: e.pointerType === "touch", timer: null, ghost: null };
+      drag = st;
+      if (st.touch) st.timer = setTimeout(function () { if (drag === st) begin(st, st.x, st.y); }, 280);
+    });
+  }
+  function begin(st, x, y) {
+    st.started = true;
+    var g = st.node.cloneNode(true);
+    g.className = g.className + " ghost" + (ROT ? " rot" : "");
+    if (ROT) g.style.setProperty("--gs", String(ROT_SCALE * 1.08));
+    st.ghost = g;
+    document.documentElement.appendChild(g);
+    moveGhost(st, x, y);
+    document.body.classList.add("dragging");
+  }
+  function moveGhost(st, x, y) { st.ghost.style.left = x + "px"; st.ghost.style.top = y + "px"; }
+  function highlight(x, y) {
+    var all = document.querySelectorAll(".over");
+    for (var i = 0; i < all.length; i++) all[i].classList.remove("over");
+    var t = dropTargetAt(x, y);
+    if (t && t.id !== "pal") t.classList.add("over");
+    $("pal").classList.toggle("drop-ok", !!(drag && drag.from && drag.from.kind !== "pal" && t && t.id === "pal"));
+  }
+  document.addEventListener("pointermove", function (e) {
+    var st = drag;
+    if (!st) return;
+    if (!st.started) {
+      var d = Math.abs(e.clientX - st.x) + Math.abs(e.clientY - st.y);
+      if (st.touch) { if (d > 12) { clearTimeout(st.timer); drag = null; } return; }          // タッチは、長押しで持ち上げる（動いたらスクロール）
+      if (d > 6) begin(st, e.clientX, e.clientY); else return;
+    }
+    moveGhost(st, e.clientX, e.clientY);
+    highlight(e.clientX, e.clientY);
+  });
+  document.addEventListener("touchmove", function (e) { if (drag && drag.started) e.preventDefault(); }, { passive: false });
+  function finish(e, cancelled) {
+    var st = drag;
+    if (!st) return;
+    drag = null;
+    clearTimeout(st.timer);
+    var all = document.querySelectorAll(".over");
+    for (var i = 0; i < all.length; i++) all[i].classList.remove("over");
+    $("pal").classList.remove("drop-ok");
+    document.body.classList.remove("dragging");
+    if (!st.started) {                                       // 動かさずに離した：クリック（持ち上げる／置く）
+      if (!cancelled) clickTag(st);
+      return;
+    }
+    if (st.ghost) st.ghost.remove();
+    if (cancelled) return;
+    var t = dropTargetAt(e.clientX, e.clientY);
+    if (t) dropOn(st.ch, st.from, t);
+  }
+  document.addEventListener("pointerup", function (e) { finish(e, false); });
+  document.addEventListener("pointercancel", function (e) { finish(e, true); });
+  function clickTag(st) {
+    var same = sel && sel.id === st.ch.id && sameFrom(sel.from, st.from);
+    var zone = st.node.closest ? st.node.closest("[data-drop]") : null;
+    if (sel && !same && zone) { dropOn(sel.ch, sel.from, zone); return; }          // 持ち上げている名札を、この枠に置く
+    sel = same ? null : { id: st.ch.id, ch: st.ch, from: st.from };
+    fill();
+  }
+  $("pal").addEventListener("click", function (e) {                                  // 持ち上げている名札を、名札置き場へ（枠から外す）
+    if (sel && sel.from.kind !== "pal" && !(e.target.closest && e.target.closest(".tag"))) dropOn(sel.ch, sel.from, $("pal"));
+  });
+  function sameFrom(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+
+  // 置き先（data-drop）：fav:選手ID ／ set:v:b（v＝見る側 h|s、b＝ban|pick）
+  function opp(v) { return v === "h" ? "s" : "h"; }
+  function blockFaction(v, b) { return b === "ban" ? opp(v) : v; }          // BANは相手の陣営のキャラ、PICKは自分の陣営のキャラ
+  function dropPath(spec) {
+    var p = spec.split(":");
+    if (p[0] === "fav") return "fav/" + p[1];
+    if (p[0] === "rule") return "rules/" + p[1];                                     // ルール設定：ローカルBANのキャラ
+    if (p[0] === "gbx") { var gid = setId(); return gid ? "rules/gbx/" + gid + "/" + p[1] : null; }
+    var sid = setId();
+    return sid ? "sets/" + sid + "/" + p[1] + "/" + p[2] : null;
+  }
+  function pathOfFrom(from, id) {
+    if (!from || from.kind === "pal") return null;
+    var base = dropPath(from.spec);
+    return base ? base + "/" + id : null;
+  }
+  function dropOn(ch, from, target) {
+    var ops = {}, old = pathOfFrom(from, ch.id);
+    if (target.id === "pal") {                               // 名札置き場へ戻す：外す
+      if (old) { ops[old] = null; write(ops); }
+      sel = null; fill();
+      return;
+    }
+    var spec = target.getAttribute("data-drop");
+    if (target.classList.contains("off")) return;
+    var parts = spec.split(":");
+    if (parts[0] === "gbx") {                                                        // GLOBAL BAN（手動で、足す）
+      if (ch.f !== parts[1]) { flash("この枠には、" + (parts[1] === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。"); return; }
+      var gp = dropPath(spec) + "/" + ch.id;
+      var go1 = {}; go1[gp] = 1; if (old) go1[old] = null;
+      sel = null; write(go1); return;
+    }
+    if (parts[0] === "set" && ch.f !== blockFaction(parts[1], parts[2])) {
+      flash(parts[2] === "ban" ? (parts[1] === "s" ? "サバイバー目線のBANには、ハンターのキャラを入れます（サバイバー側がハンターをBANします）。"
+                                                     : "ハンター目線のBANには、サバイバーのキャラを入れます（ハンター側がサバイバーをBANします）。")
+                              : (parts[1] === "s" ? "サバイバー目線のPICKには、サバイバーのキャラを入れます。" : "ハンター目線のPICKには、ハンターのキャラを入れます。"));
+      return;
+    }
+    var path = dropPath(spec);
+    if (!path) return;
+    var dest = path + "/" + ch.id;
+    if (dest === old) { sel = null; fill(); return; }
+    if (obj(getAt(path))[ch.id]) { if (old) { ops[old] = null; write(ops); } sel = null; fill(); return; }     // すでに入っている（同じ枠に同じ名札は入らない）
+    ops[dest] = true;
+    if (old) ops[old] = null;
+    sel = null;
+    write(ops);
+  }
+  function getAt(path) {
+    var node = STATE, segs = path.split("/");
+    for (var i = 0; i < segs.length; i++) { if (node == null || typeof node !== "object") return null; node = node[segs[i]]; }
+    return node;
+  }
+  var flashTimer = null;
+  function flash(msg) { var n = $("notice"); n.setAttribute("data-flash", msg); showNotice(); clearTimeout(flashTimer); flashTimer = setTimeout(function () { n.removeAttribute("data-flash"); showNotice(); }, 3500); }
+
+  function onDropClick(spec, node) {                         // 持ち上げている名札を、クリックで置く
+    if (!sel) return;
+    var st = sel;
+    dropOn(st.ch, st.from, node);
+  }
+
+  // ───────── 描画 ─────────
+  function buildAll() {
+    if (!META) return;
+    buildTabs();
+    buildPalette();
+    buildWork();
+    fill();
+  }
+  var palFilter = "";
+  var roleSort = false;
+  try { roleSort = localStorage.getItem("prep_role_sort") === "1"; } catch (e) { /* 無視 */ }
+  function buildPalette() {
+    var pal = $("pal"); pal.textContent = "";
+    var q = el("input"); q.type = "search"; q.placeholder = "キャラを探す"; q.value = palFilter;
+    q.addEventListener("input", function () { palFilter = q.value; fillPalette(); });
+    pal.appendChild(q);
+    pal.appendChild(el("div", "hint", "名札を右の枠へドラッグ（スマホは、長押ししてから動かす／タップして選び、置きたい枠をタップ）。外すときは、ここへ戻すか ×。"));
+    pal.appendChild(el("h3", "", "ハンター"));
+    var bh = el("div", "palbox h"), gh = el("div", "grid"); gh.id = "palH"; bh.appendChild(gh); pal.appendChild(bh);
+    var hs = el("div"); hs.style.cssText = "display:flex;align-items:center;gap:10px;flex:none";
+    hs.appendChild(el("h3", "", "サバイバー"));
+    var lab = el("label", "palopt"), cb = el("input"); cb.type = "checkbox"; cb.id = "roleSort"; cb.checked = roleSort;
+    cb.addEventListener("change", function () { roleSort = cb.checked; try { localStorage.setItem("prep_role_sort", roleSort ? "1" : "0"); } catch (e) { /* 無視 */ } fillPalette(); });
+    lab.appendChild(cb); lab.appendChild(document.createTextNode("職業ごとの並び替え"));
+    hs.appendChild(lab); pal.appendChild(hs);
+    var bs = el("div", "palbox s"), gs = el("div"); gs.id = "palS"; bs.appendChild(gs); pal.appendChild(bs);
+    fillPalette();
+  }
+  function capOf(s, v, b) { return b === "ban" ? ((s.ban || {})[opp(v)] || 0) : ((s.pick || {})[v] || 0); }   // サバイバー目線のBAN＝ハンターを何キャラBANするか、ハンター目線のBAN＝サバイバーを何キャラBANするか
+  function pickedIds(rno, k, v) {                                                    // そのセットの、v目線のPICK（必須キャラの自動分も含む）
+    var st = obj(obj(STATE.sets)[rno + "_" + k]), ids = Object.keys(obj(obj(st[v]).pick)).map(Number);
+    var r = (META.rounds || []).filter(function (x) { return x.no === rno; })[0], s = r && (r.sets || []).filter(function (x) { return x.k === k; })[0];
+    if (s) ((s.req && s.req[v]) || []).forEach(function (q) { if (!q.g && ids.indexOf(q.id) < 0) ids.push(q.id); });
+    return ids.filter(function (id) { return CH[id] && CH[id].f === v; });
+  }
+  function lbSet(s) { var o = {}; ["h", "s"].forEach(function (f) { ((s.lb || {})[f] || []).forEach(function (id) { o[id] = true; }); }); return o; }
+  function editableGb() { return FREE && !obj(rules()).detail; }                       // 自動の名札を、手で直せるのは、「セットごとに詳しく」にしていないとき
+  function globalBase(v, r, s) {                                                      // 自動で入るもの：BOTが知っている使用済み ＋ このボードで、前のセットのPICKに入れたもの
+    var lbs = lbSet(s), out = [];
+    function add(id) { if (CH[id] && CH[id].f === v && out.indexOf(id) < 0 && !lbs[id]) out.push(id); }
+    ((s.gb || {})[v] || []).forEach(add);
+    if ((s.gbOn || {})[v]) { var i = (r.sets || []).indexOf(s); for (var j = 0; j < i; j++) pickedIds(r.no, r.sets[j].k, v).forEach(add); }
+    return out;
+  }
+  function globalList(v, r, s) {
+    var out = globalBase(v, r, s);
+    if (editableGb()) {
+      var x = obj(obj(obj(rules()).gbx)[r.no + "_" + s.k])[v];
+      Object.keys(obj(x)).forEach(function (k) {
+        var id = Number(k);
+        if (obj(x)[k] === 1) { if (CH[id] && CH[id].f === v && out.indexOf(id) < 0) out.push(id); }
+        else out = out.filter(function (y) { return y !== id; });
+      });
+    }
+    return out;
+  }
+  function reqIds() {
+    var s = curSet(), out = {};
+    if (s) ["h", "s"].forEach(function (f) { (s.req && s.req[f] || []).forEach(function (r) { out[r.id] = r.g || "req"; }); });
+    return out;
+  }
+  function gbIds() {                                                   // 使えないキャラ（使用済みの制限・ローカルBAN）
+    var s = curSet(), out = {};
+    if (s) ["h", "s"].forEach(function (f) { (s.gb && s.gb[f] || []).forEach(function (id) { out[id] = true; }); });
+    return out;
+  }
+  function lbIds() {                                                   // ローカルBAN（だれも使えない）
+    var s = curSet(), out = {};
+    if (s) ["h", "s"].forEach(function (f) { (s.lb && s.lb[f] || []).forEach(function (id) { out[id] = true; }); });
+    return out;
+  }
+  function fillPalette() {
+    var q = palFilter.trim().toLowerCase(), req = isRoundTab() ? reqIds() : {};
+    function addTag(box, c) {
+      var ch = CH[c.id];
+      var t = makeTag(ch, { req: !!req[c.id] });
+      if (sel && sel.id === c.id && sel.from.kind === "pal") t.classList.add("sel");
+      attachTag(t, ch, { kind: "pal" });
+      box.appendChild(t);
+    }
+    function match(c) { return !q || (c.n + (c.e || "")).toLowerCase().indexOf(q) >= 0; }
+    var hb = $("palH"); hb.textContent = ""; hb.className = "grid";
+    ((META.chars || {}).h || []).forEach(function (c) { if (match(c)) addTag(hb, c); });
+    var sb = $("palS"); sb.textContent = "";
+    var all = (META.chars || {}).s || [];
+    if (roleSort && (META.roles || []).length) {                               // 職業ごと：同じキャラが、いくつかの職業に出てもよい（並びは、いつもの並びのまま）
+      sb.className = "";
+      var byId = {}; all.forEach(function (c) { byId[c.id] = c; });
+      (META.roles || []).forEach(function (g) {
+        var list = (g.ids || []).map(function (id) { return byId[id]; }).filter(function (c) { return c && match(c); });
+        if (!list.length) return;
+        sb.appendChild(el("div", "rolehd", g.e + " " + g.n));
+        var grid = el("div", "grid"); sb.appendChild(grid);
+        list.forEach(function (c) { addTag(grid, c); });
+      });
+    } else {
+      sb.className = "grid";
+      all.forEach(function (c) { if (match(c)) addTag(sb, c); });
+    }
+  }
+  // ───────── ルール設定 ─────────
+  var RCTL = [];
+  function rules() { return obj(STATE.rules); }
+  function ruleNum(v, d, lo, hi) { v = parseInt(v, 10); return isNaN(v) ? d : Math.max(lo, Math.min(hi, v)); }
+  var SET_KEYS = ["1", "2", "3", "ext"], SET_LABEL = { "1": "第1セット", "2": "第2セット", "3": "第3セット", ext: "延長戦" };
+  function deriveFree() {                                                             // ルール設定から、ラウンド・セットの情報（大会BOTのmetaと同じ形）を作る
+    var R = rules(), n = ruleNum(R.n, 3, 1, 8), detail = !!R.detail, gbAll = R.gb !== false && R.gb !== 0;
+    var lb = { h: [], s: [] };
+    Object.keys(obj(R.lb)).map(Number).forEach(function (id) { if (CH[id]) lb[CH[id].f].push(id); });
+    var rounds = [];
+    for (var r = 1; r <= n; r++) {
+      var rr = obj(obj(R.r)[r]), sets = [];
+      SET_KEYS.forEach(function (k) {
+        var sv = obj(obj(R.sets)[r + "_" + k]), on;
+        var bs, bh, ps, ph;
+        if (detail) { bs = ruleNum(sv.bs, 4, 0, 8); bh = ruleNum(sv.bh, 1, 0, 8); ps = ruleNum(sv.ps, 4, 0, 8); ph = ruleNum(sv.ph, 1, 0, 8); on = sv.g === undefined ? k !== "1" : !!sv.g; }
+        else { bs = ruleNum(rr.bs, 4, 0, 8); bh = ruleNum(rr.bh, 1, 0, 8); ps = 4; ph = 1; on = gbAll && k !== "1"; }
+        sets.push({ k: k, label: SET_LABEL[k], ban: { h: bh, s: bs }, pick: { h: ph, s: ps }, gb: { h: [], s: [] }, gbOn: { h: on, s: on },
+                    lb: lb, req: { h: [], s: [] } });
+      });
+      rounds.push({ no: r, name: "ラウンド" + r, fmt: "", sets: sets });
+    }
+    var players = [];
+    for (var i = 1; i <= 8; i++) { var nm = obj(R.players)[i]; if (nm && String(nm).trim()) players.push({ id: i, n: String(nm).trim().slice(0, 20) }); }
+    return { rounds: rounds, players: players };
+  }
+  function applyMeta() {                                                              // 大会BOTのmeta（または、ルール設定）から、いま使う情報（META）を作る
+    if (!RAWMETA) return false;
+    FREE = RAWMETA.mode === "free";
+    var base = FREE ? { v: 1, team: RAWMETA.team, tour: "", chars: (LABCHARS || {}).chars || { h: [], s: [] }, roles: (LABCHARS || {}).roles || [] } : RAWMETA;
+    var before = META ? JSON.stringify([META.rounds, PLAYERS]) : "";
+    CH = {};
+    ["h", "s"].forEach(function (f) { ((base.chars || {})[f] || []).forEach(function (c) { CH[c.id] = { id: c.id, n: c.n, e: c.e, i: c.i, f: f }; }); });
+    if (FREE) { var d = deriveFree(); base.rounds = d.rounds; base.players = d.players; }
+    META = base;
+    PLAYERS = (base.players || []).filter(function (x) { return x && x.id != null; });
+    return before !== JSON.stringify([META.rounds, PLAYERS]);
+  }
+  function numSel(path, def, lo, hi) {
+    var s = el("select");
+    for (var i = lo; i <= hi; i++) { var o = el("option", "", String(i)); o.value = String(i); s.appendChild(o); }
+    s.addEventListener("change", function () { var o = {}; o[path] = Number(s.value); write(o); });
+    RCTL.push(function () { var v = getAt(path); s.value = String(v == null ? def : v); });
+    return s;
+  }
+  function chk(path, def, text) {
+    var l = el("label", "ropt"), c = el("input"); c.type = "checkbox";
+    c.addEventListener("change", function () { var o = {}; o[path] = c.checked; write(o); });
+    RCTL.push(function () { var v = getAt(path); c.checked = v == null ? def : !!v; });
+    l.appendChild(c); l.appendChild(document.createTextNode(text));
+    return l;
+  }
+  function buildRules(w) {
+    RCTL = [];
+    var box = el("div", "rules");
+    w.appendChild(box);
+    if (!FREE) {                                                                       // 大会BOTのチーム：BOTのルールが、自動で入っている
+      var sec = el("div", "sec");
+      sec.appendChild(el("h4", "", "📐 ルール設定"));
+      sec.appendChild(el("div", "hint", "大会BOTのルールが、自動で入っています（ここでは変えられません）。名札は、各セットのタブで入れます。"));
+      box.appendChild(sec);
+      (META.rounds || []).forEach(function (r) {
+        var s2 = el("div", "sec");
+        s2.appendChild(el("h5", "", r.name + (r.fmt ? "（" + r.fmt + "）" : "")));
+        var tb = el("table"), hd = el("tr");
+        ["", "サバイバー目線", "ハンター目線", "GLOBAL BAN"].forEach(function (x) { hd.appendChild(el("th", "", x)); }); tb.appendChild(hd);
+        (r.sets || []).forEach(function (s) {
+          var tr = el("tr");
+          tr.appendChild(el("td", "", s.label));
+          tr.appendChild(el("td", "", "BAN（ハンター）" + s.ban.h + "　PICK（サバイバー）" + s.pick.s));
+          tr.appendChild(el("td", "", "BAN（サバイバー）" + s.ban.s + "　PICK（ハンター）" + s.pick.h));
+          tr.appendChild(el("td", "", (s.gbOn.h || s.gbOn.s) ? "あり（前のセットで使ったキャラ）" : "なし"));
+          tb.appendChild(tr);
+        });
+        s2.appendChild(tb);
+        var first = (r.sets || [])[0] || {};
+        var lbn = ((first.lb || {}).h || []).concat((first.lb || {}).s || []).map(function (id) { return CH[id] ? CH[id].n : ""; }).filter(Boolean);
+        if (lbn.length) s2.appendChild(el("div", "hint", "ローカルBAN（全試合で使えない）：" + lbn.join("、")));
+        var rq = [];
+        (r.sets || []).forEach(function (s) { ["h", "s"].forEach(function (f) { ((s.req || {})[f] || []).forEach(function (q) { if (CH[q.id]) rq.push(s.label + "：" + CH[q.id].n + (q.g ? "（組" + q.g + "）" : "")); }); }); });
+        if (rq.length) s2.appendChild(el("div", "hint", "必須キャラ：" + rq.join("、")));
+        box.appendChild(s2);
+      });
+      return;
+    }
+    // ここから：大会BOTを使わないチーム（ルールを、自分で入れる）
+    var R = rules(), detail = !!R.detail, n = ruleNum(R.n, 3, 1, 8);
+    var s1 = el("div", "sec");
+    s1.appendChild(el("h4", "", "📐 ルール設定"));
+    s1.appendChild(el("div", "hint", "大会BOTを使っていないので、ルールは、ここで入れてください。入れたルールで、各ラウンド・各セットの枠が作られます。"));
+    box.appendChild(s1);
+    var s2 = el("div", "sec");
+    s2.appendChild(el("h4", "", "選手の名前（常用キャラのタブに並びます）"));
+    var pl = el("div", "plist");
+    for (var i = 1; i <= 8; i++) {
+      (function (i) {
+        var inp = el("input"); inp.type = "text"; inp.maxLength = 20; inp.placeholder = "選手" + i;
+        var tm = null;
+        inp.addEventListener("input", function () { clearTimeout(tm); tm = setTimeout(function () { var o = {}; o["rules/players/" + i] = inp.value.trim() || null; writeQuiet(o); }, 600); });
+        RCTL.push(function () { if (document.activeElement !== inp) { var v = getAt("rules/players/" + i); inp.value = v == null ? "" : String(v); } });
+        pl.appendChild(inp);
+      })(i);
+    }
+    s2.appendChild(pl);
+    box.appendChild(s2);
+    var s3 = el("div", "sec");
+    s3.appendChild(el("h4", "", "ラウンド・BAN・グローバルBAN"));
+    var row = el("div"); row.appendChild(document.createTextNode("ラウンド数：")); row.appendChild(numSel("rules/n", 3, 1, 8)); s3.appendChild(row);
+    s3.appendChild(chk("rules/gb", true, "グローバルBANあり（前のセットで使ったキャラを、あとのセットで使えない。第2セット以降）"));
+    if (!detail) {
+      var tb = el("table"), hd = el("tr");
+      ["", "サバイバーのBAN数（ハンターがサバイバーをBAN）", "ハンターのBAN数（サバイバーがハンターをBAN）"].forEach(function (x) { hd.appendChild(el("th", "", x)); }); tb.appendChild(hd);
+      for (var r = 1; r <= n; r++) {
+        var tr = el("tr"); tr.appendChild(el("td", "", "ラウンド" + r));
+        var a = el("td"); a.appendChild(numSel("rules/r/" + r + "/bs", 4, 0, 8)); tr.appendChild(a);
+        var b = el("td"); b.appendChild(numSel("rules/r/" + r + "/bh", 1, 0, 8)); tr.appendChild(b);
+        tb.appendChild(tr);
+      }
+      s3.appendChild(tb);
+    }
+    box.appendChild(s3);
+    var s4 = el("div", "sec");
+    s4.appendChild(el("h4", "", "ローカルBAN（すべての試合で、絶対に使えないキャラ）"));
+    s4.appendChild(el("div", "hint", "名札を、ここへドラッグして入れてください。入れたキャラは、各セットのBANの枠に、自動で入ります（BANの人数には、数えません）。"));
+    var lbz = el("div", "drop"); lbz.id = "lbzone"; lbz.setAttribute("data-drop", "rule:lb"); lbz.setAttribute("data-hint", "ここに名札を入れる");
+    lbz.addEventListener("click", function () { onDropClick("rule:lb", lbz); });
+    s4.appendChild(lbz);
+    box.appendChild(s4);
+    var s5 = el("div", "sec");
+    s5.appendChild(chk("rules/detail", false, "セットごとに、くわしくルールを決める（この場合、GLOBAL BANの、自動の名札は、手で直せません）"));
+    if (detail) {
+      for (var r2 = 1; r2 <= n; r2++) {
+        s5.appendChild(el("h5", "", "ラウンド" + r2));
+        var t2 = el("table"), h2 = el("tr");
+        ["", "サバイバーBAN数", "ハンターBAN数", "サバイバーPICK数", "ハンターPICK数", "GLOBAL BAN"].forEach(function (x) { h2.appendChild(el("th", "", x)); }); t2.appendChild(h2);
+        SET_KEYS.forEach(function (k) {
+          var tr2 = el("tr"), base = "rules/sets/" + r2 + "_" + k + "/";
+          tr2.appendChild(el("td", "", SET_LABEL[k]));
+          [["bs", 4], ["bh", 1], ["ps", 4], ["ph", 1]].forEach(function (x) { var td = el("td"); td.appendChild(numSel(base + x[0], x[1], 0, 8)); tr2.appendChild(td); });
+          var tg = el("td"); tg.appendChild(chk(base + "g", k !== "1", "あり")); tr2.appendChild(tg);
+          t2.appendChild(tr2);
+        });
+        s5.appendChild(t2);
+      }
+    }
+    box.appendChild(s5);
+  }
+  function rulesSig() { var R = rules(); return JSON.stringify([FREE, ruleNum(R.n, 3, 1, 8), !!R.detail]); }
+  function fillLb() {
+    var z = $("lbzone"); if (!z) return;
+    z.textContent = "";
+    var ids = Object.keys(obj(rules().lb)).map(Number).filter(function (id) { return CH[id]; });
+    z.classList.toggle("empty", !ids.length);
+    ids.forEach(function (id) {
+      var tg = makeTag(CH[id], { onRemove: function () { var o = {}; o["rules/lb/" + id] = null; write(o); } });
+      attachTag(tg, CH[id], { kind: "blk", spec: "rule:lb" });
+      z.appendChild(tg);
+    });
+  }
+  function afterMetaChange() {                                                        // ルールや選手の名前が変わった：タブ・名札置き場・枠を、作り直す（入力中の欄は、作り直さない）
+    if (cur.tab === "rules") { buildTabs(); buildPalette(); if (RULEBUILT !== rulesSig()) buildWork(); fill(); } else buildAll();
+  }
+  function metaChanged() {
+    if (FREE && RAWMETA && applyMeta()) { if (isRoundTab() && !curRound()) cur = { tab: "rules", set: "1" }; afterMetaChange(); return true; }
+    return false;
+  }
+
+  function buildWork() {
+    var w = $("work"); w.textContent = "";
+    if (cur.tab === "rules") { RULEBUILT = rulesSig(); buildRules(w); return; }
+    if (cur.tab === "fav") {
+      w.appendChild(el("div", "hint", "選手ごとの得意キャラです。名札を選手の枠に入れてください（同じ枠に同じキャラは入りません。選手が違えば、同じキャラでも入れられます）。"));
+      var g = el("div", "players");
+      if (!PLAYERS.length) w.appendChild(el("div", "empty-msg", FREE ? "「ルール設定」のタブで、選手の名前を入れると、ここに並びます。" : "選手が登録されると、ここに並びます。"));
+      PLAYERS.forEach(function (p) {
+        var b = el("div", "box");
+        var h = el("h4", "", p.n); b.appendChild(h);
+        var d = el("div", "drop"); d.setAttribute("data-drop", "fav:" + p.id); d.setAttribute("data-hint", "ここに名札を入れる");
+        d.addEventListener("click", function () { onDropClick("fav:" + p.id, d); });
+        b.appendChild(d); g.appendChild(b);
+      });
+      w.appendChild(g);
+      return;
+    }
+    var s = curSet();
+    if (!s) { w.appendChild(el("div", "empty-msg", "このラウンドの情報がありません。")); return; }
+    var r = curRound();
+    w.appendChild(el("div", "hint", r.name + "（" + r.fmt + "）／" + s.label + "　サバイバー目線：BAN（ハンター）" + s.ban.h + "・PICK（サバイバー）" + s.pick.s
+      + "　／　ハンター目線：BAN（サバイバー）" + s.ban.s + "・PICK（ハンター）" + s.pick.h + "。GLOBAL BANは、前のセットで使ったキャラが、自動で入ります。"));
+    var cs = el("div"); cs.id = "corners";
+    [["s", "サバイバー目線"], ["h", "ハンター目線"]].forEach(function (pair) {         // 中央がサバイバー目線、右がハンター目線
+      var v = pair[0], c = el("div", "corner " + v); c.appendChild(el("h3", "", pair[1]));
+      [["ban", "BAN"], ["pick", "PICK"], ["gb", editableGb() ? "GLOBAL BAN（自動。手で直せます）" : "GLOBAL BAN（自動）"]].forEach(function (bk) {
+        var b = bk[0], blk = el("div", "blk " + b);
+        var h = el("h4", "", bk[1]);
+        if (b !== "gb") h.appendChild(el("small", "", "（" + (blockFaction(v, b) === "h" ? "ハンター" : "サバイバー") + "のキャラ）"));
+        else h.appendChild(el("small", "", "（" + (v === "h" ? "ハンター" : "サバイバー") + "のキャラ）"));
+        var cnt = el("span", "cnt"); cnt.id = "cnt-" + v + "-" + b; h.appendChild(cnt); blk.appendChild(h);
+        var d = el("div", "drop");
+        d.id = "blk-" + v + "-" + b;
+        if (b === "gb") {
+          d.setAttribute("data-hint", (s.gbOn || {})[v] ? "前のセットで使ったキャラが、ここに入ります" : "このセットはGLOBAL BANなし");
+          if (editableGb()) { d.setAttribute("data-drop", "gbx:" + v); d.addEventListener("click", (function (spec, node) { return function () { onDropClick(spec, node); }; })("gbx:" + v, d)); }
+        }
+        else {
+          var cap = capOf(s, v, b);
+          if (cap === 0) { d.classList.add("off"); d.textContent = (b === "ban" ? "BAN" : "PICK") + "はできないセットです"; }
+          else { d.setAttribute("data-drop", "set:" + v + ":" + b); d.setAttribute("data-hint", "ここに名札を入れる"); d.addEventListener("click", (function (spec, node) { return function () { onDropClick(spec, node); }; })("set:" + v + ":" + b, d)); }
+        }
+        blk.appendChild(d); c.appendChild(blk);
+      });
+      cs.appendChild(c);
+    });
+    w.appendChild(cs);
+    var memo = el("div"); memo.id = "memo";
+    memo.appendChild(el("h4", "", "メモ（戦略・メモなど。みんなで同時に書けます）"));
+    var ta = el("textarea"); ta.maxLength = 2000; ta.placeholder = "自由に書いてください";
+    var timer = null, sid = setId();
+    ta.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { var o = {}; o["sets/" + sid + "/memo"] = ta.value || null; writeQuiet(o); }, 500);
+    });
+    ta.id = "memoText";
+    memo.appendChild(ta); w.appendChild(memo);
+  }
+  function fill() {
+    if (!META) return;
+    fillPalette();
+    if (cur.tab === "rules") {
+      if (RULEBUILT !== rulesSig()) buildWork();
+      RCTL.forEach(function (f) { f(); });
+      fillLb();
+    } else if (cur.tab === "fav") {
+      PLAYERS.forEach(function (p) {
+        var d = document.querySelector('[data-drop="fav:' + p.id + '"]');
+        if (!d) return;
+        d.textContent = "";
+        var ids = Object.keys(obj(obj(STATE.fav)[p.id])).map(Number).filter(function (id) { return CH[id]; });
+        ids.sort(function (a, b) { return (CH[a].f === CH[b].f ? 0 : CH[a].f === "h" ? -1 : 1) || a - b; });
+        d.classList.toggle("empty", !ids.length);
+        ids.forEach(function (id) {
+          var t = makeTag(CH[id], { onRemove: function () { var o = {}; o["fav/" + p.id + "/" + id] = null; write(o); } });
+          if (sel && sel.id === id && sel.from.spec === "fav:" + p.id) t.classList.add("sel");
+          attachTag(t, CH[id], { kind: "blk", spec: "fav:" + p.id });
+          d.appendChild(t);
+        });
+      });
+    } else {
+      var s = curSet();
+      if (s) {
+        var req = reqIds(), lb = lbIds(), st = setState(), rd = curRound();
+        var gbv = {};
+        ["s", "h"].forEach(function (f) { gbv[f] = {}; globalList(f, rd, s).forEach(function (id) { gbv[f][id] = true; }); });
+        var hard = {};                                                                  // ぜったい必須のキャラ（組の必須ではないもの）
+        ["h", "s"].forEach(function (f) { ((s.req && s.req[f]) || []).forEach(function (r) { if (!r.g) hard[r.id] = true; }); });
+        [["s"], ["h"]].forEach(function (fa) {
+          var f = fa[0];
+          ["ban", "pick"].forEach(function (b) {
+            var d = $("blk-" + f + "-" + b);
+            if (!d) return;
+            var cap = capOf(s, f, b);
+            if (cap === 0) return;                                                      // できない枠：そのまま
+            var want = blockFaction(f, b);                                              // この枠に入るキャラの陣営
+            var auto = Object.keys(b === "pick" ? hard : lb).map(Number).filter(function (id) { return CH[id] && CH[id].f === want; });
+            var manual = Object.keys(obj(obj(st[f])[b])).map(Number).filter(function (id) { return CH[id] && auto.indexOf(id) < 0; });
+            var counted = manual.length + (b === "pick" ? auto.length : 0);               // ローカルBANは、BANの人数には、数えない（別のカウント）
+            d.textContent = "";
+            d.classList.toggle("empty", !manual.length && !auto.length);
+            d.classList.toggle("exact", counted === cap);                                 // 人数がピッタリ揃った：枠線に、青いライン
+            auto.forEach(function (id) { d.appendChild(makeTag(CH[id], { locked: true, req: !!req[id], bad: b === "pick" && !!gbv[f][id] })); });      // 自動で入ったもの（外せない）
+            manual.forEach(function (id) {
+              var spec = "set:" + f + ":" + b;
+              var isBad = b === "pick" ? !!gbv[f][id] : !!lb[id];                // PICKは使えないキャラだと、警告
+              var t = makeTag(CH[id], { req: !!req[id], bad: isBad, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
+              if (sel && sel.id === id && sel.from.spec === spec) t.classList.add("sel");
+              attachTag(t, CH[id], { kind: "blk", spec: spec });
+              d.appendChild(t);
+            });
+            var c = $("cnt-" + f + "-" + b);
+            if (c) { c.textContent = counted + " / " + cap + (b === "ban" && auto.length ? "（＋ローカルBAN " + auto.length + "）" : ""); c.className = "cnt" + (counted > cap ? " over" : ""); }
+          });
+          var g = $("blk-" + f + "-gb");
+          if (g) {
+            g.textContent = "";
+            var gl = globalList(f, rd, s);                                              // 前のセットで使ったキャラ（ローカルBANは、BANの枠に入るので、ここには出さない）
+            g.classList.toggle("empty", !gl.length);
+            gl.forEach(function (id) {
+              var o2 = { locked: true };
+              if (editableGb()) o2.onRemove = function () {
+                var o = {}, auto = globalBase(f, rd, s).indexOf(id) >= 0;
+                o["rules/gbx/" + rd.no + "_" + s.k + "/" + f + "/" + id] = auto ? 0 : null; write(o);
+              };
+              g.appendChild(makeTag(CH[id], o2));
+            });
+          }
+        });
+        var ta = $("memoText");
+        if (ta) { var v = String(obj(st).memo || ""); if (document.activeElement !== ta && ta.value !== v) ta.value = v; }
+      }
+    }
+    showNotice();
+  }
+  function showNotice() {
+    var n = $("notice"); n.textContent = "";
+    var flashMsg = n.getAttribute("data-flash");
+    if (flashMsg) n.appendChild(el("div", "bar err", flashMsg));
+    if (writeFailed) n.appendChild(el("div", "bar err", "保存できませんでした（通信が切れている、または Firebase のルールの設定が違います）。管理者に伝えてください。"));
+    var fresh = newIds();
+    if (fresh.length) {                                                                // 知らない端末が、開きました
+      var bar = el("div", "bar newid");
+      bar.appendChild(el("span", "", "⚠ 知らない端末のアクセスがあります：" + fresh.slice(0, 4).map(function (h) { return (h.n || "?") + "（ID " + h.cid.slice(0, 6) + "）" + fmtTime(h.t); }).join("、")
+        + (fresh.length > 4 ? " ほか" : "") + "。チームの人でなければ、すぐに、チームの管理者に知らせてください。"));
+      var ok = el("button", "", "確認した");
+      ok.type = "button";
+      ok.addEventListener("click", function () { var s = seenList(); fresh.forEach(function (h) { if (s.indexOf(h.cid) < 0) s.push(h.cid); }); saveSeen(s); showNotice(); });
+      bar.appendChild(ok);
+      var hb = el("button", "", "履歴を見る"); hb.type = "button"; hb.addEventListener("click", openHist); bar.appendChild(hb);
+      n.appendChild(bar);
+    }
+  }
+
+  // ───────── 読み込み ─────────
+  function onMeta(m) {
+    if (!m) { if (!META) setStatus("データを待っています…（BOTが準備すると表示されます）", ""); return; }
+    RAWMETA = m;
+    applyMeta();
+    $("ttl").textContent = "🧪 IDV TEAM LAB｜" + (m.team || "");
+    $("sub").textContent = m.tour || "";
+    document.title = "IDV TEAM LAB｜" + (m.team || "");
+    if (FIRST_META) { FIRST_META = false; if (FREE && !savedTab) cur = { tab: "rules", set: "1" }; }              // 大会BOTを使わないチームは、最初は、ルール設定から
+    if (isRoundTab() && !curRound()) cur = { tab: FREE ? "rules" : "fav", set: "1" };
+    if (isRoundTab() && !curSet()) cur.set = (curRound().sets[0] || {}).k;
+    var memoFocused = document.activeElement && document.activeElement.id === "memoText";
+    if (memoFocused) { buildTabs(); buildPalette(); fill(); } else buildAll();
+  }
+  var savedTab = false;
+  try { var saved = JSON.parse(sessionStorage.getItem("lab_tab_" + ID) || "null"); if (saved && saved.tab) { cur = saved; savedTab = true; } } catch (e) { /* 無視 */ }
+  function getJson(u) { return fetch(u, { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); }
+  Promise.all([getJson(ASSET + "face_positions.json"), getJson(ASSET + "assets/face_positions.json")]).then(function (r) {
+    FACES = (r[0] && r[0].faces) || (r[1] && r[1].faces) || {};
+  }).then(boot);
+})();
+</script>
+</body>
+</html>
