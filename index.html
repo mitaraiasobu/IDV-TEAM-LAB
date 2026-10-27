@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https: data:; connect-src https://*.firebasedatabase.app https://*.firebaseio.com https://*.github.io; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https://mitaraiasobu.github.io data:; connect-src https://idv-team-lab-default-rtdb.asia-southeast1.firebasedatabase.app https://mitaraiasobu.github.io; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -133,6 +133,9 @@
   #hist .danger .dmsg { margin-top: 8px; min-height: 16px; color: #ff9aa5; }
   #gate .eye, #hist .eye { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); padding: 5px 10px; font-size: 13px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
   #gate .welcome { color: #fff; line-height: 1.7; margin: 10px 0 4px; } #gate .welcome b { font-size: 17px; } #gate .welcome .steps { margin-top: 8px; font-size: 14px; }
+  #gate .consent h3 { margin: 14px 0 4px; font-size: 14px; color: #fff; } #gate .consent div { font-size: 12.5px; line-height: 1.7; color: var(--text); margin: 2px 0; }
+  #gate .consent .bul { padding-left: 1em; text-indent: -1em; } #gate .consent .links a { display: block; color: #8cc4ff; word-break: break-all; font-size: 12px; margin: 2px 0; }
+  #gate .nogo { display: block; margin: 10px auto 0; opacity: .85; }
   #gate .go { margin-top: 14px; width: 100%; padding: 11px; font-size: 16px; font-weight: 700; background: #2f7be0; border: 0; color: #fff; border-radius: 8px; cursor: pointer; }
   #gate .go[disabled] { opacity: .5; cursor: wait; }
   #gate .warn { background: #4a1219; border: 1px solid #ff3b52; color: #ffc9ce; border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.6; margin: 10px 0; }
@@ -408,24 +411,24 @@
     gate(function (c) {
       brand(c, (metaTeam || "") + "｜はじめに、パスワードを決めてください");
       if (withUrl) {                                                                // このURLが、このボードの、ただ1つの入り口
-        var u = el("div", "warn"), pu = el("div"); pu.textContent = "このボードのURL（ほかの人には、見せないでください）：";
+        var u = el("div", "warn"), pu = el("div"); pu.textContent = "このボードのURL（流出厳禁！）：";
         var inp0 = el("input"); inp0.type = "text"; inp0.readOnly = true; inp0.value = location.href; inp0.style.cssText = "width:100%;margin:6px 0;font-size:12px;background:#000;color:#fff;border:1px solid #888;border-radius:6px;padding:6px";
         var cp = el("button", "btn", "URLをコピー"); cp.type = "button";
         cp.addEventListener("click", function () { inp0.select(); try { document.execCommand("copy"); cp.textContent = "コピーしました"; } catch (e) { /* 無視 */ } });
         u.appendChild(pu); u.appendChild(inp0); u.appendChild(cp);
-        u.appendChild(el("div", "", "このURLが、このボードに入る、ただ1つの鍵です。メモなどに、かならず、保存してください。"));
+        u.appendChild(el("div", "", "URLは、このラボに入るただ1つの扉です。大切に保存してください。"));
+        u.appendChild(el("div", "", "URLをなくすと同じラボには入れなくなり、新しいラボを作り直すことになります。"));
         c.appendChild(u);
       }
       var w = el("div", "warn");
-      [["このページを開くための「パスワード」を、はじめに1回だけ決めます。", false],
-       ["パスワードは、あとから変えられません。", true],
-       ["このページのURLとパスワードは、メモなどに大切に保存してください。URLをなくすと、同じページには入れなくなり、新しいページを作り直すことになります（今までの作戦は、読めなくなります）。", false],
-       ["URLとパスワードは、チームの外の人に、決して教えないでください。流出すると、作戦が盗まれます。", true],
-       ["パスワードは、このブラウザの中だけで使われます。運営（BOT）も、GitHubも、Firebaseも、パスワードを知りません。忘れても、取り戻せません。", false]]
-        .forEach(function (x) { var p = el("div"); if (x[1]) { var b = el("b", "", x[0]); p.appendChild(b); } else p.textContent = "・" + x[0]; if (x[1]) p.insertBefore(document.createTextNode("・"), p.firstChild); w.appendChild(p); });
+      w.appendChild(el("b", "", "パスワードを決めてください。"));
+      ["パスワードはあとから変えられません。URLと同様、大切に保存してください。",
+       "URLとパスワードは、チームの外の人に決して教えないでください。作戦が流出してしまいます。",
+       "作戦の中身は、パスワードで暗号化されます（パスワード自体は、どこにも送られません）。"]
+        .forEach(function (x) { w.appendChild(el("div", "", "・" + x)); });
       c.appendChild(w);
-      var p1 = field(c, "パスワード（英大文字・小文字・数字を、すべて使って、10〜20文字）");
-      var p2 = field(c, "もう一度、同じパスワード");
+      var p1 = field(c, "パスワード（英大文字・小文字・数字をすべて使って10〜20文字、記号や空白は利用できません）");
+      var p2 = field(c, "パスワード確認（同じパスワードを入力してください）");
       c.appendChild(el("div", "rules", "使える文字：半角の英大文字・英小文字・数字だけ。記号・空白は使えません。"));
       var m = msgBox(c);
       var go = el("button", "go", "パスワードを決めて、はじめる"); go.type = "button"; c.appendChild(go);
@@ -503,7 +506,7 @@
       var nm = field(c, "名前（12文字まで）", "text"); nm.maxLength = 12; nm.value = lastName();
       var m = msgBox(c);
       var go = el("button", "go", "この名前で、はじめる"); go.type = "button"; c.appendChild(go);
-      var st = el("div", "rules", "このページは、Cookieを使いません。ブラウザの保存領域（localStorage）に、この端末の識別用の番号・6文字・あなたの名前を保存します（ログインを保存するときだけ、ログイン情報も保存します）。広告や、アクセス解析は、使っていません。アクセスすると、ページを置いているGitHubと、データを置いているFirebase（Google）に、通信の情報（IPアドレスなど）が、届きます。");
+      var st = el("div", "rules", "名前や端末の番号は、この端末のブラウザの保存領域に保存されます（くわしくは、最初の「同意」の画面に書いてあります）。");
       c.appendChild(st);
       function ok() {
         var v = cleanName(nm.value);
@@ -1312,9 +1315,86 @@
   var savedTab = false;
   try { var saved = JSON.parse(sessionStorage.getItem("lab_tab_" + ID) || "null"); if (saved && saved.tab) { cur = saved; savedTab = true; } } catch (e) { /* 無視 */ }
   function getJson(u) { return fetch(u, { cache: "no-cache" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }); }
-  Promise.all([getJson(ASSET + "face_positions.json"), getJson(ASSET + "assets/face_positions.json")]).then(function (r) {
-    FACES = (r[0] && r[0].faces) || (r[1] && r[1].faces) || {};
-  }).then(boot);
+  function start() {
+    Promise.all([getJson(ASSET + "face_positions.json"), getJson(ASSET + "assets/face_positions.json")]).then(function (r) {
+      FACES = (r[0] && r[0].faces) || (r[1] && r[1].faces) || {};
+    }).then(boot);
+  }
+
+  // ───────── 同意の画面（チーム名・パスワード・ログインの前に、かならず1回。同意するまで、Firebaseへの通信は、しない） ─────────
+  var CONSENT_KEY = "lab_consent_v2", sessionConsent = false;
+  function hasConsent() { try { return localStorage.getItem(CONSENT_KEY) === "1"; } catch (e) { return sessionConsent; } }
+  function giveConsent() { sessionConsent = true; try { localStorage.setItem(CONSENT_KEY, "1"); } catch (e) { /* 無視 */ } }
+  var POLICY = [                                                              // 同意の画面の文章。「p」＝文章、「b」＝箇条書き、「l」＝リンク
+    ["1. IPアドレスと外部サービスとの通信", [
+      ["p", "Webページの表示や、データの送受信では、通信に必要な情報として、IPアドレスなどが、通信先に伝わります。このページが通信する先は、次の2つだけです（ブラウザの設定でも、これ以外への通信を止めています）。"],
+      ["b", "GitHub：このページと、キャラクターの画像の配信"],
+      ["b", "Firebase（Google）：パスワードの設定・ログイン・作戦データや履歴の保存と同期"],
+      ["p", "ページの表示のときはGitHubへ、ログインや保存・同期のときはFirebaseへ、通信します。IPアドレスなどは、各サービスに送られ、各サービスの方針に従って、処理・記録されることがあります。"],
+      ["p", "このページには、IPアドレスを取得・記録・利用する機能は、ありません。運営者のBOTも、このページとは通信しません（BOTがFirebaseに書くのは、チームの場所に置く、大会の情報だけです）。運営者が、各サービスの管理画面やログから、IPアドレスなどを見られるかどうかは、各サービスの仕様と、運営者の権限によります。"],
+      ["p", "各サービスでの情報の取り扱いは、各社のプライバシーポリシーをご確認ください。"],
+      ["l", [["GitHub", "https://docs.github.com/ja/site-policy/privacy-policies/github-general-privacy-statement"], ["Google", "https://policies.google.com/privacy?hl=ja"]]]]],
+    ["2. ブラウザ内に保存する情報", [
+      ["p", "このページは、Cookieを使いません。ブラウザの保存領域（localStorage）に、次の情報を保存します。"],
+      ["b", "端末識別用のランダムな番号と、ランダムな英数字6文字：履歴で、どの端末の操作かを区別するため。"],
+      ["b", "名前：履歴や画面で、利用者を区別するため。"],
+      ["b", "同意の記録：次回から、この画面を省くため。"],
+      ["b", "確認済みの端末の記録：「知らない端末のお知らせ」で、確認した端末を覚えるため。"],
+      ["b", "表示の設定（キャラクターの、職業ごとの並び替え）。"],
+      ["b", "ログイン情報：「この端末にログインを保存する」を選んだときだけ保存します。保存されるのは、パスワードそのものではなく、作戦を暗号化・復号するための鍵です。この端末のブラウザの保存データを見られる人は、パスワードなしで、このボードを開けます。共有のパソコンでは、選ばないでください。"],
+      ["b", "開いていたタブ：ブラウザのセッションの保存領域に、置きます（ブラウザを閉じると、消えます）。"],
+      ["p", "ブラウザの保存データを消すと、これらは失われ、名前の再設定と、再ログインが必要になります。このとき、新しい端末として、履歴に記録され、ほかのメンバーの画面には、「知らない端末」のお知らせが出ます。サーバーに保存された情報は、消えません。"],
+      ["p", "広告の配信や、アクセス解析のためのサービスは、使っていません。"]]],
+    ["3. 作戦データの保存と暗号化", [
+      ["p", "作戦の中身（BAN・PICK・メモ・ルールの設定・履歴の内容）は、パスワードから作った鍵で、あなたのブラウザの中で暗号化してから、Firebaseに保存します（鍵の作り方：PBKDF2-SHA256・60万回、暗号：AES-256-GCM）。パスワードや鍵を持たない人は、読めません。"],
+      ["p", "パスワードそのものは、サーバーに、送信も保存もしません。鍵は、ブラウザの中だけで使い、上の「ログインを保存」を選んだときだけ、この端末に保存します。"],
+      ["p", "次のものは、暗号化されません。URLを知っている人は、パスワードがなくても、読めます：チームの名前、（大会BOTのチームでは）大会名・選手名・ルール・キャラクターの設定、パスワード確認用のデータ、履歴の件数と時刻。パスワード確認用のデータを使って、パスワードの推測を試すことができるので、推測されにくいパスワードにしてください。"],
+      ["p", "パスワードを忘れると、作戦データを読めなくなります。運営者も、パスワードを知らないので、再発行や、データの復元は、できません。パスワードは、大切に管理してください。"],
+      ["p", "暗号化は、端末のウイルス感染や、ページのコードの改ざんなど、あらゆる危険を防ぐものではありません。"]]],
+    ["4. 操作履歴について", [
+      ["p", "チーム内の操作を確認できるよう、訪問や編集の履歴を、保存します。履歴には、次の情報が含まれます。"],
+      ["b", "操作の時刻（サーバーの時刻）"],
+      ["b", "名前と、英数字6文字"],
+      ["b", "端末識別用の番号（画面には、先頭の6文字を表示）"],
+      ["b", "端末の種類（OSとブラウザの名前）"],
+      ["b", "操作の内容（どのキャラクターを入れた・外した、メモを書き換えた、など）"],
+      ["p", "履歴の内容は、暗号化されており、パスワードを知っているチームのメンバーだけが、見られます。誰が操作したかを、確認するために使います。"]]],
+    ["5. データの削除と管理", [
+      ["p", "チームのパスワードを知っている人は、「🕘 履歴・端末」の一番下から、パスワードを入れて、そのボードのデータ（作戦と履歴）を、削除できます（確認の画面が出ます）。削除したあとは、このページには表示されず、パスワードを入れても、「だれが、いつ削除したか」だけが、表示されます。"],
+      ["p", "ただし、この削除は、暗号化されたデータを、サーバーから消すものではありません（安全のためのルールで、ブラウザからは、サーバーのデータを消せないため）。暗号化されたデータは、サーバーに残ります。サーバーからも消したいときは、運営者に、依頼してください。チームの名前など、暗号化されていない情報（3.を参照）も、この削除では、消えません。"],
+      ["p", "パスワードは、チーム内で共有されるため、特定のメンバーだけが知っているとは限りません。信頼できる人にだけ、共有してください。パスワードを知らずに、URLだけを知っている人は、データの削除も、書き換えも、できません。"],
+      ["p", "ブラウザの保存データを消しても、サーバーのデータは、消えません。反対に、この削除機能を使っても、ブラウザの保存データ（名前や端末の番号など）は、消えません。"]]],
+    ["6. 同意について", [
+      ["p", "「同意して進む」を押すと、この説明を確認し、情報の取り扱いに同意したものとして、記録します。同意の記録は、このブラウザに保存され、次回からは、この画面を省きます（保存できない設定のブラウザでは、毎回、表示されます）。"],
+      ["p", "同意するまでは、Firebaseへの通信と、画像の読み込みを、しません。ページを表示するためのGitHubへの通信は、この画面を出す前に、行われます。"],
+      ["p", "同意しない場合は、このページを、使えません。同意の記録を消したいときは、ブラウザの保存データを消してください（サーバーのデータは、消えません）。"]]],
+    ["7. 説明内容の変更", [
+      ["p", "機能や、使う外部サービス、情報の取り扱いが変わったときは、実際の仕様に合わせて、この説明を更新し、もう一度、同意をお願いします。この説明は、情報の取り扱いを、利用者にお知らせするものです。"]]]
+  ];
+  function showConsent() {
+    gate(function (c) {
+      brand(c, "データの取り扱いとご利用にあたって");
+      var box = el("div", "consent");
+      box.appendChild(el("div", "", "このページは、チームの作戦データを保存・共有するため、ブラウザ内への情報の保存や、外部サービスとの通信を行います。取り扱う情報と、注意事項を、ご確認ください。"));
+      POLICY.forEach(function (sec) {
+        box.appendChild(el("h3", "", sec[0]));
+        sec[1].forEach(function (it) {
+          if (it[0] === "l") {
+            var d = el("div", "links");
+            it[1].forEach(function (lk) { var a = el("a", "", lk[0] + "：" + lk[1]); a.href = lk[1]; a.target = "_blank"; a.rel = "noopener noreferrer"; d.appendChild(a); });
+            box.appendChild(d);
+          } else box.appendChild(el("div", it[0] === "b" ? "bul" : "", (it[0] === "b" ? "・" : "") + it[1]));
+        });
+      });
+      c.appendChild(box);
+      var m = msgBox(c);
+      var go = el("button", "go", "同意して進む"); go.type = "button"; c.appendChild(go);
+      var no = el("button", "btn nogo", "同意しない"); no.type = "button"; c.appendChild(no);
+      go.addEventListener("click", function () { giveConsent(); $("gate").hidden = true; start(); });
+      no.addEventListener("click", function () { m.textContent = "同意いただけない場合は、このページは、ご利用になれません。このタブを、閉じてください。"; });
+    });
+  }
+  if (hasConsent()) start(); else showConsent();
 })();
 </script>
 </body>
