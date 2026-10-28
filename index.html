@@ -1227,8 +1227,9 @@
       var st = { ch: ch, from: from, x: e.clientX, y: e.clientY, cx: e.clientX, cy: e.clientY, started: false, node: node, pid: e.pointerId, touch: e.pointerType === "touch", timer: null, ghost: null, shift: !!e.shiftKey, group: null };
       drag = st;
       hideWhy();
-      if (st.touch) st.timer = setTimeout(function () { if (drag === st) begin(st, st.x, st.y); }, 280);
+      if (st.touch && node._why && node._why.length) st.timer = setTimeout(function () { if (drag === st) { st.explained = true; showWhy(node); } }, 450);       // スマホ：長押しで、特殊な名札の説明（動かすのは、タップして選び、置く枠をタップ）
     });
+    node.addEventListener("contextmenu", function (e) { e.preventDefault(); });                // 長押しで、ブラウザのメニューが出ないように
   }
   function begin(st, x, y) {
     st.started = true;
@@ -1252,9 +1253,16 @@
     node._why.forEach(function (x) { pop.appendChild(el("div", "", x)); });
     document.documentElement.appendChild(pop);
     var r = node.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
-    var left = Math.max(6, Math.min(window.innerWidth - pw - 6, r.left)), top = r.bottom + 8;
-    if (top + ph > window.innerHeight - 6) top = Math.max(6, r.top - ph - 8);
-    pop.style.left = left + "px"; pop.style.top = top + "px";
+    if (ROT) {                                                                       // 回して表示しているとき：説明の文字も回して、名札の画面の下（実際の左）に出す
+      var rx = r.left - 8;
+      if (rx - ph < 6) rx = r.right + 8 + ph;
+      pop.style.transformOrigin = "0 0"; pop.style.transform = "rotate(90deg)";
+      pop.style.left = Math.min(rx, window.innerWidth - 6) + "px"; pop.style.top = Math.max(6, Math.min(window.innerHeight - pw - 6, r.top)) + "px";
+    } else {
+      var left = Math.max(6, Math.min(window.innerWidth - pw - 6, r.left)), top = r.bottom + 8;
+      if (top + ph > window.innerHeight - 6) top = Math.max(6, r.top - ph - 8);
+      pop.style.left = left + "px"; pop.style.top = top + "px";
+    }
     setTimeout(hideWhy, 8000);
   }
   document.addEventListener("pointerdown", function (e) { if (!(e.target.closest && e.target.closest(".tag"))) hideWhy(); }, true);
@@ -1283,7 +1291,7 @@
     st.cx = e.clientX; st.cy = e.clientY;
     if (!st.started) {
       var d = Math.abs(e.clientX - st.x) + Math.abs(e.clientY - st.y);
-      if (st.touch) { if (d > 12) { clearTimeout(st.timer); drag = null; } return; }          // タッチは、長押しで持ち上げる（動いたらスクロール）
+      if (st.touch) { if (d > 12) { clearTimeout(st.timer); drag = null; } return; }          // タッチは、ドラッグしない（動いたらスクロール）
       if (d > 6) begin(st, e.clientX, e.clientY); else return;
     }
     moveGhost(st, e.clientX, e.clientY);
@@ -1300,7 +1308,7 @@
     $("pal").classList.remove("drop-ok");
     document.body.classList.remove("dragging");
     if (!st.started) {                                       // 動かさずに離した：クリック（持ち上げる／置く）
-      if (!cancelled) clickTag(st, e);
+      if (!cancelled && !st.explained) clickTag(st, e);                                  // 長押しで説明を出したときは、選ばない
       return;
     }
     if (st.ghost) st.ghost.remove();
@@ -1320,7 +1328,7 @@
     }
     if (SELS.length && !mine && zone) { dropMany(SELS.slice(), zone, !!(e && (e.ctrlKey || e.metaKey)), st.node.classList.contains("locked") ? null : { id: st.ch.id, after: false }); return; }      // 持ち上げている名札を、この枠に置く（Ctrlなら複製。クリックした名札の前に入れる）
     SELS = mine && SELS.length === 1 ? [] : [me];
-    if (SELS.length && st.node._why && st.node._why.length) showWhy(st.node);          // 特殊な表示（灰色・★・必須・使用済みなど）の名札は、クリックで、理由を説明する
+    if (SELS.length && !st.touch && st.node._why && st.node._why.length) showWhy(st.node);          // 特殊な表示（灰色・★・必須・使用済みなど）の名札は、PCではクリックで、スマホでは長押しで、理由を説明する
     fill();
   }
   $("pal").addEventListener("click", function (e) {                                  // 持ち上げている名札を、名札置き場へ（枠から外す）
@@ -1466,7 +1474,7 @@
     var q = el("input"); q.type = "search"; q.placeholder = "キャラを探す"; q.value = palFilter;
     q.addEventListener("input", function () { palFilter = q.value; fillPalette(); });
     pal.appendChild(q);
-    pal.appendChild(el("div", "hint", "名札を右の枠へドラッグ（スマホは長押ししてから動かす／タップして選び、置きたい枠をタップ）。外すときはここへ戻すか ×。"));
+    pal.appendChild(el("div", "hint", "名札を右の枠へドラッグ（スマホは、名札をタップして選び、置きたい枠をタップ。特殊な表示の名札は、長押しで説明）。外すときはここへ戻すか ×。"));
     var bh = el("div", "palbox h"), gh = el("div", "grid"); gh.id = "palH"; bh.appendChild(gh);
     pal.appendChild(foldBtn("h", "ハンター", bh)); pal.appendChild(bh);
     var bs = el("div", "palbox s"), gs = el("div"); gs.id = "palS"; bs.appendChild(gs);
