@@ -73,6 +73,8 @@
   .tag.gray { filter: grayscale(1) brightness(.8); opacity: .7; }                                    /* 組み合わせ禁止で、選べない／選べなくなったキャラ */
   .pn.s { color: #6fb0ff; } .pn.h { color: #ff7d8d; } .pn.sh { color: #c79bff; }                    /* 選手名：サバイバー応募＝青／ハンター応募＝赤／両方＝紫 */
   html[data-tone="light"] .pn.s { color: #1f5fb4; } html[data-tone="light"] .pn.h { color: #c3213a; } html[data-tone="light"] .pn.sh { color: #7b3fc4; }
+  #pcNote { position: fixed; left: 8px; right: 8px; top: 8px; z-index: 100001; background: var(--panel); color: var(--text); border: 2px solid var(--ac); border-radius: 10px; padding: 10px 14px; font-size: 3.4vw; line-height: 1.6; box-shadow: 0 6px 24px rgba(0, 0, 0, .6); }
+  #pcNote b { display: block; margin-bottom: 4px; } #pcNote .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; } #pcNote .btn { font-size: 3vw; }
   #whyPop { position: fixed; z-index: 100000; max-width: 290px; background: var(--panel); color: var(--text); border: 1px solid var(--ac); border-radius: 10px; padding: 8px 12px 9px; font-size: 12.5px; line-height: 1.6; box-shadow: 0 6px 22px rgba(0,0,0,.5); }
   #whyPop b { display: block; margin-bottom: 2px; font-size: 13px; } #whyPop div + div { margin-top: 3px; }
   #gate .who { display: flex; align-items: baseline; gap: 10px; width: 100%; margin: 6px 0; padding: 11px 12px; text-align: left; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 15px; cursor: pointer; }
@@ -457,6 +459,35 @@
   window.addEventListener("resize", fit);
   window.addEventListener("orientationchange", function () { setTimeout(fit, 150); });
   fit();
+
+  // スマホなのに、ブラウザが「PC版サイト」で表示していそうなとき（画面は小さいのに、ページの幅だけが広い）：オフにする方法を案内する
+  function pcModeOn() {
+    var sm = Math.min(window.screen.width || 9999, window.screen.height || 9999);
+    return (navigator.maxTouchPoints || 0) > 0 && sm <= 600 && window.innerWidth >= 900 && window.innerWidth > sm * 1.5;
+  }
+  function pcModeHow() {
+    var ua = navigator.userAgent || "";
+    if (/iPhone|iPod/.test(ua)) return /CriOS|FxiOS|EdgiOS/.test(ua) ? "ブラウザのメニュー（…）から「モバイル版サイトを表示」を選んでください。" : "アドレスバー左の「ぁあ（またはAA）」を押して「モバイル用Webサイトを表示」を選んでください。";
+    if (/Android/.test(ua)) return "ブラウザのメニュー（︙）にある「PC版サイト（デスクトップ用サイト）」のチェックを外してください。";
+    return "ブラウザのメニューから、「PC版サイト（デスクトップ用サイト）」をオフにしてください。";
+  }
+  function pcModeCheck() {
+    var old = document.getElementById("pcNote"), skip = false;
+    try { skip = localStorage.getItem("lab_pcnote_off") === "1"; } catch (e) { /* 無視 */ }
+    if (skip || !pcModeOn()) { if (old) old.remove(); return; }
+    if (old) return;
+    var n = el("div"); n.id = "pcNote";
+    n.appendChild(el("b", "", "ブラウザの「PC版サイト」がオンになっているようです。"));
+    n.appendChild(el("div", "", pcModeHow() + "オフにすると、スマホを横に持って使える画面になります。"));
+    var row = el("div", "row");
+    var ok = el("button", "btn", "閉じる"); ok.type = "button"; ok.addEventListener("click", function () { n.remove(); });
+    var never = el("button", "btn nogo", "このまま使う（もう出さない）"); never.type = "button";
+    never.addEventListener("click", function () { try { localStorage.setItem("lab_pcnote_off", "1"); } catch (e) { /* 無視 */ } n.remove(); });
+    row.appendChild(ok); row.appendChild(never); n.appendChild(row);
+    document.documentElement.appendChild(n);
+  }
+  window.addEventListener("resize", pcModeCheck);
+  setTimeout(pcModeCheck, 300);
 
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
   function setStatus(txt, cls) { var s = $("status"); s.textContent = txt; s.className = cls || ""; }
