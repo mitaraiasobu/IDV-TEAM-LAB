@@ -70,7 +70,7 @@
   .tag .face { width: 56px; height: 56px; margin: 0 auto; border-radius: 6px; background-repeat: no-repeat; background-color: rgba(0,0,0,.35);
                display: flex; align-items: center; justify-content: center; font-size: 26px; }
   .tag .nm { font-size: 10.5px; line-height: 1.15; margin-top: 2px; word-break: break-all; min-height: 24px; display: flex; align-items: center; justify-content: center; }
-  .tag .rms { position: absolute; top: 2px; right: 3px; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; z-index: 2; }       /* 縦に並べる */
+  .tag .rms { position: absolute; top: 17px; right: 3px; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; z-index: 2; }       /* 縦に並べる */
   .tag .rms span { font-size: 10px; line-height: 1; padding: 1px; border-radius: 8px; background: rgba(0, 0, 0, .6); color: #fff; }
   .tag.fav.h { background: linear-gradient(180deg, #5a1d29, #a02a3d); border-color: #ff5e75; }                /* 誰かの得意キャラ：少しだけ明るく */
   .tag.fav.s { background: linear-gradient(180deg, #1c3f73, #2b62b0); border-color: #5ca2ff; }
@@ -97,6 +97,11 @@
   .pgrid .psel, .pgrid .pname { width: 100%; font: inherit; font-size: 12px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 4px; text-align: center; }
   .pgrid .pname { color: var(--sub); background: none; border-style: dashed; }
   .drop.cell { min-height: 84px; justify-content: center; }
+  .tag[data-num]::after, .drop.cell[data-num]::after, .frame::after { content: attr(data-num); position: absolute; top: -1px; right: 3px; z-index: 4; font-size: 14px; font-weight: 800; line-height: 1; color: var(--gold); text-shadow: 0 0 3px #000, 0 0 3px #000; pointer-events: none; }
+  .drop.cell { position: relative; }
+  .frame { position: relative; width: 66px; min-height: 78px; border: 2px dashed var(--line); border-radius: 8px; opacity: .8; flex: none; }
+  .mapbar { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 6px; font-size: 12.5px; }
+  .mapbar label { display: inline-flex; align-items: center; gap: 6px; color: var(--sub); } .mapbar select { font: inherit; font-size: 12.5px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 6px; }
   .gbrow { display: flex; flex-wrap: wrap; gap: 3px; margin: -2px 0 4px; } .gbrow[hidden] { display: none; }
   .gbface { width: 26px; height: 26px; border-radius: 4px; background-repeat: no-repeat; background-color: rgba(0,0,0,.35); filter: grayscale(1) brightness(.85); flex: none; cursor: pointer; }
   .drop.col { flex-direction: column; flex-wrap: nowrap; align-items: center; min-height: 100px; }                                      /* キャラは、縦に並ぶ */
@@ -1111,6 +1116,7 @@
       if (p[2] === "memo") return where + "：メモを書き換えた";
       if (p[3] === "memo") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + "のメモを書き換えた";
       if (p[3] === "slots") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[p[4]] || "PICK") + "のスロットの数を変えた";
+      if (/^map\d+$/.test(p[3] || "")) return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " マップを" + (add ? "選んだ" : "外した");
       if (p[3] === "pl") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " PICKの選手名を変えた";
       var bn = baseB(p[3] || ""), cm0 = parseCell(p[3] || ""), sn = cm0 ? "編成" + cm0.r + "・" + cm0.c + "番目" : "";
       return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[bn] || "PICK") + (sn ? "（" + sn + "）" : "") + (add ? " に " : " から ") + ch(p[4]) + (add ? " を入れた" : " を外した");
@@ -1451,6 +1457,15 @@
     if (!slotMode()) return 1;
     var r = curRound(), s = curSet();
     return r && s ? slotCountOf(v, base, r, (r.sets || []).indexOf(s)) : 1;
+  }
+  var CIRC = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓㉔";
+  function circ(n) { return n >= 1 && n <= 24 ? CIRC.charAt(n - 1) : String(n); }
+  function blockNums(s, v, base) {                                                   // その枠の、1キャラごとの番号（BAN/PICKの手順の何番目か）。例：[1,1,1]（①を3人）／[3,3,5,7]
+    base = baseB(base);
+    var want = base === "ban" ? { side: v, a: "b", t: opp(v) } : base === "eban" ? { side: opp(v), a: "b", t: v } : base === "pick" ? { side: v, a: "p", t: v } : { side: opp(v), a: "p", t: opp(v) };
+    var out = [];
+    ((s && s.st) || []).forEach(function (x, i) { if (x.s === want.side && x.a === want.a && x.t === want.t) for (var k = 0; k < x.n; k++) out.push(i + 1); });
+    return out;
   }
   function cellName(base, r, c) { return base + r + c; }                              // スロットr行の、c番目の選手の枠（例：pick12＝1行目の2番目の選手）
   function parseCell(nm) { var m = /^(e?pick)([1-6])([1-9])$/.exec(nm); return m ? { base: m[1], r: Number(m[2]), c: Number(m[3]) } : null; }
@@ -1986,6 +2001,19 @@
         hd.appendChild(sw);
       }
       c.appendChild(hd);
+      var msteps = []; ((s && s.st) || []).forEach(function (x, i) { if (x.t === "m") msteps.push({ i: i + 1, x: x }); });
+      if (msteps.length && META.maps && META.maps.length) {                              // マップのBAN/PICK：画像は無いので、一覧から選ぶ
+        var mb = el("div", "mapbar");
+        msteps.forEach(function (m) {
+          var own = m.x.s === v, lab = el("label", "", circ(m.i) + (own ? "" : "相手の") + "マップ" + (m.x.a === "b" ? "BAN" : "PICK") + (own ? "" : "（予想）"));
+          var sel = el("select", "msel"); sel.setAttribute("data-v", v); sel.setAttribute("data-i", m.i);
+          var o0 = el("option", "", "（マップを選ぶ）"); o0.value = ""; sel.appendChild(o0);
+          META.maps.forEach(function (nm) { var o = el("option", "", nm); o.value = nm; sel.appendChild(o); });
+          sel.addEventListener("change", function () { var o = {}; o["sets/" + setId() + "/" + v + "/map" + m.i] = sel.value || null; writeQuiet(o); });
+          lab.appendChild(sel); mb.appendChild(lab);
+        });
+        c.appendChild(mb);
+      }
       [["own", "自陣営", v, ["ban", "pick", "gb"]], ["enemy", "敵陣営", opp(v), ["eban", "epick", "egb"]]].forEach(function (sd) {      // 左：自陣営の情報／右：敵陣営の情報（予想）
         var side = el("div", "side " + sd[0]);
         side.appendChild(el("h5", "", sd[1] + "（" + fname(sd[2]) + "）"));
@@ -2021,8 +2049,10 @@
                 cols.appendChild(sl);
               } else cols.appendChild(el("div", "pname", "相手" + c));
             })(c1);
+            var nums = blockNums(s, v, b);
             for (var r1 = 1; r1 <= n; r1++) for (var c2 = 1; c2 <= cap; c2++) {
               var nm = cellName(b, r1, c2), d = el("div", "drop col cell"); d.id = "blk-" + v + "-" + nm;
+              if (nums[c2 - 1]) d.setAttribute("data-num", circ(nums[c2 - 1]));
               d.setAttribute("data-drop", "set:" + v + ":" + nm); d.setAttribute("data-hint", n > 1 ? "編成" + r1 : "ここに名札");
               clickDrop("set:" + v + ":" + nm, d);
               cols.appendChild(d);
@@ -2163,8 +2193,9 @@
               var manual = Object.keys(mapB).map(Number).filter(function (id) { return CH[id] && mapB[id] && auto.indexOf(id) < 0; }).sort(byPlaced(mapB));      // 置いた順
               var counted = manual.length + (isPickT ? auto.length : 0);
               if (b === base) { shown = counted; autoN = auto.length; }
+              var nums = names.length === 1 ? blockNums(s, f, base) : [];
               d.textContent = "";
-              d.classList.toggle("empty", !manual.length && !auto.length);
+              d.classList.toggle("empty", !manual.length && !auto.length && !nums.length);
               d.classList.toggle("exact", counted === cap);                                 // 人数がピッタリ揃った：枠線に、青いライン
               var picked = {}; manual.concat(isPickT ? auto : []).forEach(function (id) { picked[id] = true; });
               var cst = isSurvivorPick(f, base) && (s.cb || []).length ? comboState(s, picked, cap) : { blocked: {}, violated: {} };      // 組み合わせ禁止
@@ -2176,7 +2207,7 @@
                 if (base === "pick" && gbv[f][id]) aw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）です。");
                 d.appendChild(makeTag(CH[id], { locked: true, req: !!req[id], bad: isPickT && badOf(id), why: aw }));
               });      // 自動で入ったもの（外せない）
-              manual.forEach(function (id) {
+              manual.forEach(function (id, mi) {
                 var isBad = badOf(id), mw = [];
                 if (req[id]) mw.push(reqWhy(req[id]));
                 if (isBad && base === "pick") mw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。");
@@ -2185,9 +2216,11 @@
                 if (cst.violated[id]) mw = mw.concat(cst.violated[id]);
                 var t = makeTag(CH[id], { req: !!req[id], bad: isBad, gray: !!cst.violated[id], why: mw, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
                 if (isSel(id, { kind: "blk", spec: spec })) t.classList.add("sel");
+                if (nums[mi]) t.setAttribute("data-num", circ(nums[mi]));
                 attachTag(t, CH[id], { kind: "blk", spec: spec });
                 d.appendChild(t);
               });
+              for (var fi = manual.length + (isPickT ? auto.length : 0); fi < nums.length; fi++) { var fr = el("div", "frame"); fr.setAttribute("data-num", circ(nums[fi])); d.appendChild(fr); }          // まだ入っていない枠（番号つき）
               var sl = $("psel-" + f + "-" + b);                                         // スロットの選手名
               if (sl) { fillSel(sl, f); sl.value = String(obj(obj(st[f]).pl)[b] || ""); }
             });
@@ -2225,6 +2258,7 @@
               eg.appendChild(tg);
             });
           }
+          [].forEach.call(document.querySelectorAll('.msel[data-v="' + f + '"]'), function (ms) { var mv0 = String(obj(st[f])["map" + ms.getAttribute("data-i")] || ""); if (document.activeElement !== ms && ms.value !== mv0) ms.value = mv0; });          // マップ
           var ta = $("memoText-" + f);                                                  // メモ（この目線の）
           if (ta) { var raw = obj(st[f]).memo, mv = String(raw != null ? raw : (f === "s" ? st.memo : "") || ""); if (document.activeElement !== ta && ta.value !== mv) ta.value = mv; }
         });
