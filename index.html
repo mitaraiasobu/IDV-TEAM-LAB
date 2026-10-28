@@ -47,7 +47,8 @@
   .palhd:hover { color: var(--text); } .palbox.collapsed { display: none; }
   #pal input { width: 100%; flex: none; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 13px; }
   #pal .hint { flex: none; margin: 0; }
-  .palbox { flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }     /* ハンターの名札置き場と、サバイバーの名札置き場は、別々にスクロール */
+  .palbox { flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; touch-action: none; scrollbar-width: none; }
+  .palbox::-webkit-scrollbar { display: none; }                                      /* スクロールバーは見せない（ホイール・指のスクロールは、できる） */     /* ハンターの名札置き場と、サバイバーの名札置き場は、別々にスクロール */
   .palbox.h { border-top: 2px solid var(--h); } .palbox.s { border-top: 2px solid var(--s); }
   .palopt { flex: none; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sub); margin: 0 2px; cursor: pointer; user-select: none; }
   #pal .palopt input { width: auto; flex: none; padding: 0; accent-color: var(--s); }
@@ -359,7 +360,7 @@
 <div id="stage" hidden>
 <header>
   <h1 id="ttl">IDV TEAM LAB</h1><span class="sub" id="sub"></span>
-  <button class="btn hbtn" id="themeBtn" type="button">🎨 デザイン</button><button class="btn hbtn" id="histBtn" type="button">🕘 履歴・端末</button><span id="status">接続中…</span>
+  <button class="btn hbtn" id="themeBtn" type="button">🎨 デザイン</button><button class="btn hbtn" id="helpBtn" type="button">❓ 使い方</button><button class="btn hbtn" id="histBtn" type="button">🕘 履歴・端末</button><span id="status">接続中…</span>
 </header>
 <nav id="tabs1"></nav>
 <nav id="tabs2"></nav>
@@ -931,8 +932,29 @@
     }
     enter();
   }
+  function helpSeen() { try { return localStorage.getItem("lab_help_seen") === "1"; } catch (e) { return false; } }
+  function phoneUse() { return ROT || ((navigator.maxTouchPoints || 0) > 0 && Math.min(window.innerWidth, window.innerHeight) < 700); }          // スマホ（タップで動かす）か、パソコン（ドラッグで動かす）か
+  function showHelp() {                                                              // 使い方：端末ごとに違う2つだけ（名札の動かし方・特殊な名札の理由の見方）
+    var phone = phoneUse();
+    gate(function (c) {
+      brand(c, "使い方（" + (phone ? "スマホ" : "パソコン") + "）");
+      var w = el("div", "warn");
+      (phone ? ["名札を動かすとき：名札をタップして選び、そのあと、入れたい枠をもう一度タップします。",
+                "灰色・★・必須などの特殊な表示の名札：長押しすると、理由が出ます。"]
+             : ["名札を動かすとき：名札をつまんで（ドラッグして）、入れたい枠までスライドします。",
+                "灰色・★・必須などの特殊な表示の名札：クリックすると、理由が出ます。"])
+        .forEach(function (x) { w.appendChild(el("div", "", "・" + x)); });
+      c.appendChild(w);
+      c.appendChild(el("div", "rules", "この説明は、右上の「❓ 使い方」から、いつでも見られます。"));
+      var go = el("button", "go", "閉じる"); go.type = "button";
+      go.addEventListener("click", function () { try { localStorage.setItem("lab_help_seen", "1"); } catch (e) { /* 無視 */ } $("gate").hidden = true; });
+      c.appendChild(go);
+    });
+  }
   function enter() {
     $("gate").hidden = true; $("stage").hidden = false;
+    $("helpBtn").addEventListener("click", showHelp);
+    if (!helpSeen()) showHelp();                                               // はじめて開いたとき
     fit();
     keepLight([stream("meta", onMeta, { every: 60000 }), stream("log", onLog)]);          // メタ情報は、60秒ごとに取りに行く（つなぎっぱなしは、ログの1本だけ）
     sendEvent({ k: "v" });                                                    // 訪問の記録（この端末のIDと、端末の名前）
@@ -1355,6 +1377,32 @@
     var t = dropTargetAt(e.clientX, e.clientY);
     if (t) dropMany(st.group || [{ id: st.ch.id, ch: st.ch, from: st.from }], t, !!(e.ctrlKey || e.metaKey), anchorAt(t, e.clientX, e.clientY));           // Ctrlを押しながら：複製
   }
+  // 名札欄の、指でのスクロール：名札の上でも、空いている所でも、指をスライドさせるとスクロールする（動かしたあとは、タップにしない）。回して表示しているときは、指の左右が、名札欄の縦になる
+  var PS = null;
+  document.addEventListener("pointerdown", function (e) {
+    if (e.pointerType !== "touch") return;
+    var box = e.target.closest ? e.target.closest(".palbox") : null;
+    PS = box ? { box: box, x: e.clientX, y: e.clientY, top: box.scrollTop, moved: false, v: 0, t: Date.now(), id: e.pointerId } : null;
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    if (!PS || e.pointerId !== PS.id) return;
+    var raw = ROT ? e.clientX - PS.x : PS.y - e.clientY;
+    if (!PS.moved && Math.abs(raw) < 8) return;
+    PS.moved = true;
+    if (drag) { clearTimeout(drag.timer); drag = null; }                             // 名札を押したままスクロールしたときは、タップにしない
+    hideWhy();
+    var now = Date.now(), nt = PS.top + (ROT ? raw / ROT_SCALE : raw);
+    PS.v = (nt - PS.box.scrollTop) / Math.max(1, now - PS.t); PS.t = now;
+    PS.box.scrollTop = nt;
+  }, true);
+  function psEnd() {
+    var ps = PS; PS = null;
+    if (!ps || !ps.moved) return;
+    var v = Date.now() - ps.t > 80 ? 0 : ps.v;                                       // 指を止めてから離したときは、勢いをつけない
+    (function step() { if (Math.abs(v) < 0.02 || PS) return; ps.box.scrollTop += v * 16; v *= 0.94; requestAnimationFrame(step); })();
+  }
+  document.addEventListener("pointerup", psEnd, true);
+  document.addEventListener("pointercancel", psEnd, true);
   document.addEventListener("pointerup", function (e) { finish(e, false); });
   document.addEventListener("pointercancel", function (e) { finish(e, true); });
   function clickTag(st, e) {
