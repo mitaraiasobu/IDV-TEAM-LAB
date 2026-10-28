@@ -43,6 +43,8 @@
   #pal { flex: 0 0 330px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
   #pal.drop-ok { outline: 2px dashed var(--sub); }
   #pal h3 { margin: 0 2px; font-size: 13px; color: var(--sub); flex: none; }
+  .palhd { appearance: none; flex: none; background: none; border: 0; color: var(--sub); font: inherit; font-size: 13px; font-weight: 700; margin: 0 2px; padding: 2px 4px; cursor: pointer; text-align: left; }
+  .palhd:hover { color: var(--text); } .palbox.collapsed { display: none; }
   #pal input { width: 100%; flex: none; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 13px; }
   #pal .hint { flex: none; margin: 0; }
   .palbox { flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }     /* ハンターの名札置き場と、サバイバーの名札置き場は、別々にスクロール */
@@ -62,7 +64,21 @@
   .tag .face { width: 56px; height: 56px; margin: 0 auto; border-radius: 6px; background-repeat: no-repeat; background-color: rgba(0,0,0,.35);
                display: flex; align-items: center; justify-content: center; font-size: 26px; }
   .tag .nm { font-size: 10.5px; line-height: 1.15; margin-top: 2px; word-break: break-all; min-height: 24px; display: flex; align-items: center; justify-content: center; }
+  .tag .rms { position: absolute; top: 2px; right: 3px; display: flex; flex-direction: row-reverse; flex-wrap: wrap; justify-content: flex-start; gap: 1px; max-width: 60px; z-index: 2; }
+  .tag .rms span { font-size: 10px; line-height: 1; padding: 1px; border-radius: 8px; background: rgba(0, 0, 0, .6); color: #fff; }
+  .tag.fav.h { background: linear-gradient(180deg, #5a1d29, #a02a3d); border-color: #ff5e75; }                /* 誰かの得意キャラ：少しだけ明るく */
+  .tag.fav.s { background: linear-gradient(180deg, #1c3f73, #2b62b0); border-color: #5ca2ff; }
+  .tag .fstar { position: absolute; top: 1px; left: 3px; font-size: 13px; line-height: 1; color: var(--gold); text-shadow: 0 0 3px #000, 0 1px 0 #000; z-index: 2; pointer-events: none; }
+  .tag { -webkit-touch-callout: none; }
+  .tag.gray { filter: grayscale(1) brightness(.8); opacity: .7; }                                    /* 組み合わせ禁止で、選べない／選べなくなったキャラ */
+  .pn.s { color: #6fb0ff; } .pn.h { color: #ff7d8d; } .pn.sh { color: #c79bff; }                    /* 選手名：サバイバー応募＝青／ハンター応募＝赤／両方＝紫 */
+  html[data-tone="light"] .pn.s { color: #1f5fb4; } html[data-tone="light"] .pn.h { color: #c3213a; } html[data-tone="light"] .pn.sh { color: #7b3fc4; }
+  #whyPop { position: fixed; z-index: 100000; max-width: 290px; background: var(--panel); color: var(--text); border: 1px solid var(--ac); border-radius: 10px; padding: 8px 12px 9px; font-size: 12.5px; line-height: 1.6; box-shadow: 0 6px 22px rgba(0,0,0,.5); }
+  #whyPop b { display: block; margin-bottom: 2px; font-size: 13px; } #whyPop div + div { margin-top: 3px; }
+  #gate .who { display: flex; align-items: baseline; gap: 10px; width: 100%; margin: 6px 0; padding: 11px 12px; text-align: left; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 15px; cursor: pointer; }
+  #gate .who:hover { border-color: var(--ac); } #gate .who .tg { font-size: 11px; color: var(--sub); margin-left: auto; }
   .tag.sel { outline: 3px solid #fff; }
+  .ghost .gcount { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); background: var(--ac); color: var(--ac-on); font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 10px; }
   .tag.req { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 12px 2px rgba(255,210,63,.75); }
   .tag.req .nm { color: var(--gold); font-weight: 700; }
   .tag.bad { border-color: #ff2b45; animation: blinkTag 4s step-end infinite; }                    /* 使用禁止：枠線だけ、ゆっくり点滅（フェードなし） */
@@ -88,11 +104,16 @@
   .drop.off { display: block; background: repeating-linear-gradient(45deg, #1a1f29, #1a1f29 8px, #141820 8px, #141820 16px); border-style: solid; color: var(--sub); font-size: 12px; text-align: center; padding-top: 28px; }
   .drop.empty::before { content: attr(data-hint); color: #5d6a82; font-size: 12px; align-self: center; }
   /* セット */
-  #corners { display: flex; gap: 12px; flex-wrap: nowrap; }
-  .corner { flex: 1 1 0; background: var(--panel); border: 2px solid; border-radius: 12px; padding: 8px 10px 10px; min-width: 0; }
+  #corners { display: flex; flex-direction: column; gap: 12px; }                  /* 上：サバイバー目線／下：ハンター目線 */
+  .corner { background: var(--panel); border: 2px solid; border-radius: 12px; padding: 8px 10px 10px; min-width: 0; }
+  .corner .chd { display: flex; align-items: center; gap: 10px; margin: 0 0 6px; } .corner .chd > h3 { margin: 0; } .swapbtn { margin-left: auto; }
+  .pair { display: flex; gap: 12px; align-items: stretch; } .pair.swap { flex-direction: row-reverse; }      /* 左：自陣営／右：敵陣営（ハンター目線は入れ替えられる） */
+  .side { flex: 1 1 0; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 4px 8px 8px; background: color-mix(in srgb, var(--bg0) 55%, var(--panel)); }
+  .side.enemy { border-style: dashed; } .side > h5 { margin: 2px 0 0; font-size: 12px; color: var(--sub); letter-spacing: .08em; }
+  .blk.eban .drop, .blk.epick .drop { background: color-mix(in srgb, var(--fg0) 4%, transparent); }
   .corner.s { border-color: var(--s); } .corner.h { border-color: var(--h); }
-  .corner > h3 { margin: 0 0 6px; font-size: 16px; }
-  .corner.s > h3 { color: #7eb4ff; } .corner.h > h3 { color: #ff8896; }
+  .corner .chd > h3 { margin: 0 0 6px; font-size: 16px; }
+  .corner.s .chd > h3 { color: #7eb4ff; } .corner.h .chd > h3 { color: #ff8896; }
   .blk { margin-top: 8px; }
   .blk h4 { margin: 0 0 4px; font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
   .blk h4 small { color: var(--sub); font-weight: 400; font-size: 11px; }
@@ -107,9 +128,10 @@
   html.rot nav { padding: 2px 12px; gap: 4px; } html.rot nav button { padding: 4px 10px; font-size: 12px; } html.rot #tabs2 button { font-size: 12px; padding: 3px 9px; }
   html.rot #notice { margin: 2px 12px; font-size: 12px; } html.rot #notice .bar { padding: 3px 8px; margin-bottom: 2px; }
   html.rot main { padding: 4px 12px 8px; gap: 8px; } html.rot #pal { flex-basis: 290px; padding: 6px; } html.rot #pal .hint { display: none; }
-  html.rot .corner { padding: 6px 8px 8px; } html.rot .corner > h3 { margin-bottom: 2px; font-size: 14px; } html.rot .blk { margin-top: 4px; } html.rot .drop { min-height: 76px; }
+  html.rot .corner { padding: 6px 8px 8px; } html.rot .corner .chd > h3 { margin-bottom: 2px; font-size: 14px; } html.rot .blk { margin-top: 4px; } html.rot .drop { min-height: 76px; }
   html.rot #memo textarea { min-height: 70px; }
   .empty-msg { color: var(--sub); padding: 30px; text-align: center; }
+  .empty-msg a, #notice .bar a { color: var(--ac); word-break: break-all; }
   /* ルール設定 */
   .rules .sec { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
   .rules h4 { margin: 0 0 6px; font-size: 14px; } .rules h5 { margin: 8px 0 4px; font-size: 13px; color: #9cc4ff; }
@@ -188,7 +210,7 @@
   html[data-style="cyber"] #pal, html[data-style="cyber"] .box, html[data-style="cyber"] .rules .sec, html[data-style="cyber"] #hist .card, html[data-style="cyber"] #theme .card, html[data-style="cyber"] #gate .card {
     border: 0; border-radius: 0; clip-path: none;
     box-shadow: 0 -4px 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), 0 4px 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), -4px 0 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), 4px 0 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), 0 0 22px color-mix(in srgb, var(--ac) 22%, transparent), inset 0 0 0 2px color-mix(in srgb, var(--ac) 14%, transparent); }
-  html[data-style="cyber"] .corner { border-radius: 0; }
+  html[data-style="cyber"] .corner, html[data-style="cyber"] .side { border-radius: 0; } html[data-style="cyber"] .side { border-style: dotted; }
   html[data-style="cyber"] .rules .sec { margin-bottom: 18px; } html[data-style="cyber"] .players { gap: 18px; } html[data-style="cyber"] #work { padding: 6px 8px 24px; }   /* 枠の線が、くっつかない・切れないように */
   html[data-style="cyber"] nav button, html[data-style="cyber"] .btn, html[data-style="cyber"] #gate .go, html[data-style="cyber"] #gate .eye {
     border: 0; border-radius: 0; letter-spacing: .06em;
@@ -230,7 +252,7 @@
   html[data-style="cute"] header h1 { color: var(--ac); font-weight: 800; letter-spacing: .08em; display: inline-block;
     text-shadow: 0 2px 0 color-mix(in srgb, var(--bg0) 70%, #fff), 0 0 14px color-mix(in srgb, var(--ac) 40%, transparent); animation: cu-bob 3.2s ease-in-out infinite; }
   html[data-style="cute"] header h1::before { content: "♡ "; } html[data-style="cute"] header h1::after { content: " ♡"; animation: cu-twinkle 2.4s ease-in-out infinite; }
-  html[data-style="cute"] #pal, html[data-style="cute"] .box, html[data-style="cute"] .corner, html[data-style="cute"] .rules .sec, html[data-style="cute"] #hist .card, html[data-style="cute"] #theme .card, html[data-style="cute"] #gate .card { border-radius: 26px; }
+  html[data-style="cute"] #pal, html[data-style="cute"] .box, html[data-style="cute"] .corner, html[data-style="cute"] .side, html[data-style="cute"] .rules .sec, html[data-style="cute"] #hist .card, html[data-style="cute"] #theme .card, html[data-style="cute"] #gate .card { border-radius: 26px; }
   html[data-style="cute"] #pal, html[data-style="cute"] .box, html[data-style="cute"] .rules .sec, html[data-style="cute"] #hist .card, html[data-style="cute"] #theme .card, html[data-style="cute"] #gate .card {
     border: 2px dashed color-mix(in srgb, var(--ac) 60%, var(--bg0)); background: var(--panel);
     box-shadow: 0 8px 22px color-mix(in srgb, var(--ac) 18%, transparent), inset 0 0 0 4px color-mix(in srgb, var(--bg0) 60%, transparent); }
@@ -269,7 +291,7 @@
   @keyframes go-glow { 50% { text-shadow: 0 0 26px color-mix(in srgb, var(--ac) 80%, transparent); } }
 
   /* ロック：太い字・斜めに切った形・ひっかき傷・ときどき走る光 */
-  html[data-style="rock"] header h1, html[data-style="rock"] nav button, html[data-style="rock"] .corner > h3, html[data-style="rock"] #hist h2, html[data-style="rock"] #theme h2 { font-family: Impact, "Arial Black", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; font-synthesis: none; }
+  html[data-style="rock"] header h1, html[data-style="rock"] nav button, html[data-style="rock"] .corner .chd > h3, html[data-style="rock"] #hist h2, html[data-style="rock"] #theme h2 { font-family: Impact, "Arial Black", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; font-synthesis: none; }
   html[data-style="rock"] header h1 { font-weight: 400; font-style: italic; letter-spacing: .06em; color: var(--text); text-shadow: 3px 3px 0 var(--ac); transform-origin: left center; animation: ro-punch 5s ease-in-out infinite; }
   html[data-style="rock"] #pal, html[data-style="rock"] .box, html[data-style="rock"] .rules .sec, html[data-style="rock"] #hist .card, html[data-style="rock"] #theme .card, html[data-style="rock"] #gate .card {
     border-radius: 0; border-left: 5px solid var(--ac); clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%); }
@@ -299,8 +321,8 @@
   html[data-tone="light"] .drop.over { background: color-mix(in srgb, var(--ac) 22%, transparent); border-color: var(--ac); }
   html[data-tone="light"] .drop.off { background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--bg0) 92%, var(--fg0)), color-mix(in srgb, var(--bg0) 92%, var(--fg0)) 8px, color-mix(in srgb, var(--bg0) 85%, var(--fg0)) 8px, color-mix(in srgb, var(--bg0) 85%, var(--fg0)) 16px); }
   html[data-tone="light"] .drop.empty::before { color: color-mix(in srgb, var(--fg0) 45%, var(--bg0)); }
-  html[data-tone="light"] .rolehd, html[data-tone="light"] .rules h5, html[data-tone="light"] .corner.s > h3, html[data-tone="light"] #hist .kv { color: #1f5fb4; }
-  html[data-tone="light"] .corner.h > h3 { color: #c3213a; } html[data-tone="light"] #hist .ke { color: #9a5b00; }
+  html[data-tone="light"] .rolehd, html[data-tone="light"] .rules h5, html[data-tone="light"] .corner.s .chd > h3, html[data-tone="light"] #hist .kv { color: #1f5fb4; }
+  html[data-tone="light"] .corner.h .chd > h3 { color: #c3213a; } html[data-tone="light"] #hist .ke { color: #9a5b00; }
   html[data-tone="light"] #hist .danger { color: #9b1428; } html[data-tone="light"] #hist .danger .dmsg, html[data-tone="light"] #gate .msg { color: #c1203f; }
   html[data-tone="light"] #gate .consent .links a { color: #1f5fb4; }
   /* 明るい背景では、パネルを白っぽく（くすまないように）。入力欄も、白に近く */
@@ -315,7 +337,7 @@
 </style>
 </head>
 <body>
-<script>window.LAB_DB_URL = "https://idv-team-lab-default-rtdb.asia-southeast1.firebasedatabase.app"; window.LAB_ASSET_BASE = "https://mitaraiasobu.github.io/IDV-tournament-BOT-brows/"; window.LAB_CHARS = {"chars":{"h":[{"id":54,"n":"復讐者","e":"🔥","i":"Hunter/HellEmber.webp"},{"id":55,"n":"道化師","e":"🚀","i":"Hunter/SmileyFace.webp"},{"id":56,"n":"断罪狩人","e":"🦌","i":"Hunter/Gamekeeper.webp"},{"id":57,"n":"リッパー","e":"✂","i":"Hunter/Jack_The_Ripper.webp"},{"id":58,"n":"結魂者","e":"🕸️","i":"Hunter/SoulWeaver.webp"},{"id":59,"n":"芸者","e":"🦋","i":"Hunter/Geisha.webp"},{"id":60,"n":"白黒無常","e":"☂","i":"Hunter/WuChang.webp"},{"id":61,"n":"写真家","e":"📷","i":"Hunter/Joseph%3B_smoother.webp"},{"id":62,"n":"狂眼","e":"🍺","i":"Hunter/MadEyes.webp"},{"id":63,"n":"黄衣の王","e":"🐙","i":"Hunter/TheFeaster.webp"},{"id":64,"n":"夢の魔女","e":"🐍","i":"Hunter/DreamWitch.webp"},{"id":65,"n":"泣き虫","e":"😭","i":"Hunter/AxeBoy.webp"},{"id":66,"n":"魔トカゲ","e":"🦎","i":"Hunter/EvilReptilian.webp"},{"id":67,"n":"血の女王","e":"👑","i":"Hunter/BloodyQueen.webp"},{"id":68,"n":"ガードNo.26","e":"💣","i":"Hunter/Guard26.webp"},{"id":69,"n":"使徒","e":"🐈","i":"Hunter/Disciple.webp"},{"id":70,"n":"ヴァイオリニスト","e":"🎻","i":"Hunter/Violinist.webp"},{"id":71,"n":"彫刻師","e":"🗿","i":"Hunter/Sculptor.webp"},{"id":72,"n":"アンデッド","e":"🧟","i":"Hunter/Undead.webp"},{"id":73,"n":"破輪","e":"☸️","i":"Hunter/TheBreakingWheel.webp"},{"id":74,"n":"漁師","e":"🧜‍♀️","i":"Hunter/Naiad.webp"},{"id":75,"n":"蝋人形師","e":"🕯","i":"Hunter/WaxArtist.webp"},{"id":76,"n":"悪夢","e":"🐓","i":"Hunter/Nightmare.webp"},{"id":77,"n":"書記官","e":"📜","i":"Hunter/Clerk.webp"},{"id":78,"n":"隠者","e":"⚡","i":"Hunter/Hermit.webp"},{"id":79,"n":"夜の番人","e":"🌪","i":"Hunter/NightWatch.webp"},{"id":80,"n":"フールズ・ゴールド","e":"⛏","i":"Hunter/FoolsGold.webp"},{"id":81,"n":"オペラ歌手","e":"🎤","i":"Hunter/OperaSinger.webp"},{"id":82,"n":"時空の影","e":"👻","i":"Hunter/TheShadow.webp"},{"id":83,"n":"足萎えの羊","e":"🐑","i":"Hunter/Goatman.webp"},{"id":84,"n":"フラバルー","e":"🎈","i":"Hunter/Hullabaloo.webp"},{"id":85,"n":"雑貨商","e":"🧺","i":"Hunter/Peddler.webp"},{"id":86,"n":"ビリヤードプレイヤー","e":"🎱","i":"Hunter/Cueist.webp"},{"id":87,"n":"女王蜂","e":"🐝","i":"Hunter/QueenBee.webp"},{"id":88,"n":"歯医者","e":"🦷","i":"Hunter/Dentist.webp"},{"id":89,"n":"心の獣","e":"🐺","i":"Hunter/Herztier.webp"}],"s":[{"id":1,"n":"幸運児","e":"🍀","i":"survivor/LuckyGuy.webp"},{"id":2,"n":"医師","e":"💉","i":"survivor/Doctor.webp"},{"id":3,"n":"弁護士","e":"⚖️","i":"survivor/Lawyer.webp"},{"id":4,"n":"空軍","e":"🔫","i":"survivor/Coordinator.webp"},{"id":5,"n":"庭師","e":"🌷","i":"survivor/Gardener.webp"},{"id":6,"n":"泥棒","e":"🔦","i":"survivor/Thief.webp"},{"id":7,"n":"傭兵","e":"🤕","i":"survivor/Mercenary.webp"},{"id":8,"n":"調香師","e":"🧴","i":"survivor/Perfumer.webp"},{"id":9,"n":"占い師","e":"🦉","i":"survivor/Seer.webp"},{"id":10,"n":"マジシャン","e":"🪄","i":"survivor/Magician.webp"},{"id":11,"n":"カウボーイ","e":"🤠","i":"survivor/Cowboy.webp"},{"id":12,"n":"冒険家","e":"📙","i":"survivor/Explorer.webp"},{"id":13,"n":"祭司","e":"🔯","i":"survivor/Priestess.webp"},{"id":14,"n":"機械技師","e":"🤖","i":"survivor/Mechanic.webp"},{"id":15,"n":"オフェンス","e":"🏈","i":"survivor/Forward.webp"},{"id":16,"n":"心眼","e":"👁️","i":"survivor/TheMindsEye.webp"},{"id":17,"n":"踊り子","e":"🩰","i":"survivor/FemaleDancer.webp"},{"id":18,"n":"納棺師","e":"⚰️","i":"survivor/Embalmer.webp"},{"id":19,"n":"探鉱者","e":"🧲","i":"survivor/Prospector.webp"},{"id":20,"n":"呪術師","e":"🔮","i":"survivor/Enchantress.webp"},{"id":21,"n":"野人","e":"🐗","i":"survivor/Wildling.webp"},{"id":22,"n":"曲芸師","e":"🤹","i":"survivor/Acrobat.webp"},{"id":23,"n":"一等航海士","e":"⚓","i":"survivor/FirstOfficer.webp"},{"id":24,"n":"バーメイド","e":"🥂","i":"survivor/Barmaid.webp"},{"id":25,"n":"ポストマン","e":"✉","i":"survivor/Postman.webp"},{"id":26,"n":"墓守","e":"🪦","i":"survivor/GraveKeeper.webp"},{"id":27,"n":"囚人","e":"⛓️","i":"survivor/Prisoner.webp"},{"id":28,"n":"昆虫学者","e":"🐛","i":"survivor/Entomologist.webp"},{"id":29,"n":"画家","e":"🎨","i":"survivor/Painter.webp"},{"id":30,"n":"バッツマン","e":"🏏","i":"survivor/Batter.webp"},{"id":31,"n":"玩具職人","e":"🧸","i":"survivor/ToyMerchant.webp"},{"id":32,"n":"患者","e":"❤️‍🩹","i":"survivor/Patient.webp"},{"id":33,"n":"心理学者","e":"❤","i":"survivor/Psychologist.webp"},{"id":34,"n":"小説家","e":"✍️","i":"survivor/Novelist.webp"},{"id":35,"n":"少女","e":"🎀","i":"survivor/LittleGirl.webp"},{"id":36,"n":"泣きピエロ","e":"🤡","i":"survivor/WeepingClown.webp"},{"id":37,"n":"教授","e":"🧪","i":"survivor/Professor.webp"},{"id":38,"n":"骨董商","e":"🪈","i":"survivor/Antiquarian.webp"},{"id":39,"n":"作曲家","e":"🎼","i":"survivor/Composer.webp"},{"id":40,"n":"記者","e":"📷","i":"survivor/Journalist.webp"},{"id":41,"n":"航空エンジニア","e":"🛩️","i":"survivor/Aeroplanist.webp"},{"id":42,"n":"応援団","e":"📣","i":"survivor/Cheerleader.webp"},{"id":43,"n":"人形師","e":"🎎","i":"survivor/Puppeteer.webp"},{"id":44,"n":"火災調査員","e":"🚒","i":"survivor/FireInvestigator.webp"},{"id":45,"n":"レディ・ファウロ","e":"🎲","i":"survivor/FaroLady.webp"},{"id":46,"n":"騎士","e":"⚔️","i":"survivor/Knight.webp"},{"id":47,"n":"気象学者","e":"🌦️","i":"survivor/Meteorologist.webp"},{"id":48,"n":"弓使い","e":"🏹","i":"survivor/Archer.webp"},{"id":49,"n":"脱出マスター","e":"🔓","i":"survivor/Escapologist.webp"},{"id":50,"n":"幻灯師","e":"🎞","i":"survivor/Lanternist.webp"},{"id":51,"n":"闘牛士","e":"🐂","i":"survivor/Matador.webp"},{"id":52,"n":"マイムアーティスト","e":"🎭","i":"survivor/MimeArtist.webp"},{"id":53,"n":"神童","e":"🌼","i":"survivor/Prodigy.webp"}]},"roles":[{"k":"decode","n":"解読職","e":"🔧","ids":[3,12,14,16,27,39,45]},{"k":"rescue","n":"救助職","e":"🚀","ids":[4,7,15,18,21,23,26,30,32,33,36,40,41,43,46,49,53]},{"k":"harass","n":"牽制職","e":"👟","ids":[1,2,5,6,7,8,10,11,13,17,19,20,22,24,28,29,31,32,33,37,38,41,42,43,44,47,48,50,51,52,53]},{"k":"support","n":"補助職","e":"🤝","ids":[2,5,9,11,13,15,17,18,19,20,21,24,25,27,28,29,30,31,33,34,35,36,37,42,44,47,49,50,51,52,53]}]};</script>
+<script>window.LAB_DB_URL = "https://idv-team-lab-default-rtdb.asia-southeast1.firebasedatabase.app"; window.LAB_ASSET_BASE = "https://mitaraiasobu.github.io/IDV-tournament-BOT-brows/"; window.LAB_CHARS = {"chars":{"h":[{"id":54,"n":"復讐者","e":"🔥","i":"Hunter/HellEmber.webp"},{"id":55,"n":"道化師","e":"🚀","i":"Hunter/SmileyFace.webp"},{"id":56,"n":"断罪狩人","e":"🦌","i":"Hunter/Gamekeeper.webp"},{"id":57,"n":"リッパー","e":"✂","i":"Hunter/Jack_The_Ripper.webp"},{"id":58,"n":"結魂者","e":"🕸️","i":"Hunter/SoulWeaver.webp"},{"id":59,"n":"芸者","e":"🦋","i":"Hunter/Geisha.webp"},{"id":60,"n":"白黒無常","e":"☂","i":"Hunter/WuChang.webp"},{"id":61,"n":"写真家","e":"📷","i":"Hunter/Joseph%3B_smoother.webp"},{"id":62,"n":"狂眼","e":"🍺","i":"Hunter/MadEyes.webp"},{"id":63,"n":"黄衣の王","e":"🐙","i":"Hunter/TheFeaster.webp"},{"id":64,"n":"夢の魔女","e":"🐍","i":"Hunter/DreamWitch.webp"},{"id":65,"n":"泣き虫","e":"😭","i":"Hunter/AxeBoy.webp"},{"id":66,"n":"魔トカゲ","e":"🦎","i":"Hunter/EvilReptilian.webp"},{"id":67,"n":"血の女王","e":"👑","i":"Hunter/BloodyQueen.webp"},{"id":68,"n":"ガードNo.26","e":"💣","i":"Hunter/Guard26.webp"},{"id":69,"n":"使徒","e":"🐈","i":"Hunter/Disciple.webp"},{"id":70,"n":"ヴァイオリニスト","e":"🎻","i":"Hunter/Violinist.webp"},{"id":71,"n":"彫刻師","e":"🗿","i":"Hunter/Sculptor.webp"},{"id":72,"n":"アンデッド","e":"🧟","i":"Hunter/Undead.webp"},{"id":73,"n":"破輪","e":"☸️","i":"Hunter/TheBreakingWheel.webp"},{"id":74,"n":"漁師","e":"🧜‍♀️","i":"Hunter/Naiad.webp"},{"id":75,"n":"蝋人形師","e":"🕯","i":"Hunter/WaxArtist.webp"},{"id":76,"n":"悪夢","e":"🐓","i":"Hunter/Nightmare.webp"},{"id":77,"n":"書記官","e":"📜","i":"Hunter/Clerk.webp"},{"id":78,"n":"隠者","e":"⚡","i":"Hunter/Hermit.webp"},{"id":79,"n":"夜の番人","e":"🌪","i":"Hunter/NightWatch.webp"},{"id":80,"n":"フールズ・ゴールド","e":"⛏","i":"Hunter/FoolsGold.webp"},{"id":81,"n":"オペラ歌手","e":"🎤","i":"Hunter/OperaSinger.webp"},{"id":82,"n":"時空の影","e":"👻","i":"Hunter/TheShadow.webp"},{"id":83,"n":"足萎えの羊","e":"🐑","i":"Hunter/Goatman.webp"},{"id":84,"n":"フラバルー","e":"🎈","i":"Hunter/Hullabaloo.webp"},{"id":85,"n":"雑貨商","e":"🧺","i":"Hunter/Peddler.webp"},{"id":86,"n":"ビリヤードプレイヤー","e":"🎱","i":"Hunter/Cueist.webp"},{"id":87,"n":"女王蜂","e":"🐝","i":"Hunter/QueenBee.webp"},{"id":88,"n":"歯医者","e":"🦷","i":"Hunter/Dentist.webp"},{"id":89,"n":"心の獣","e":"🐺","i":"Hunter/Herztier.webp"}],"s":[{"id":1,"n":"幸運児","e":"🍀","i":"survivor/LuckyGuy.webp"},{"id":2,"n":"医師","e":"💉","i":"survivor/Doctor.webp"},{"id":3,"n":"弁護士","e":"⚖️","i":"survivor/Lawyer.webp"},{"id":4,"n":"空軍","e":"🔫","i":"survivor/Coordinator.webp"},{"id":5,"n":"庭師","e":"🌷","i":"survivor/Gardener.webp"},{"id":6,"n":"泥棒","e":"🔦","i":"survivor/Thief.webp"},{"id":7,"n":"傭兵","e":"🤕","i":"survivor/Mercenary.webp"},{"id":8,"n":"調香師","e":"🧴","i":"survivor/Perfumer.webp"},{"id":9,"n":"占い師","e":"🦉","i":"survivor/Seer.webp"},{"id":10,"n":"マジシャン","e":"🪄","i":"survivor/Magician.webp"},{"id":11,"n":"カウボーイ","e":"🤠","i":"survivor/Cowboy.webp"},{"id":12,"n":"冒険家","e":"📙","i":"survivor/Explorer.webp"},{"id":13,"n":"祭司","e":"🔯","i":"survivor/Priestess.webp"},{"id":14,"n":"機械技師","e":"🤖","i":"survivor/Mechanic.webp"},{"id":15,"n":"オフェンス","e":"🏈","i":"survivor/Forward.webp"},{"id":16,"n":"心眼","e":"👁️","i":"survivor/TheMindsEye.webp"},{"id":17,"n":"踊り子","e":"🩰","i":"survivor/FemaleDancer.webp"},{"id":18,"n":"納棺師","e":"⚰️","i":"survivor/Embalmer.webp"},{"id":19,"n":"探鉱者","e":"🧲","i":"survivor/Prospector.webp"},{"id":20,"n":"呪術師","e":"🔮","i":"survivor/Enchantress.webp"},{"id":21,"n":"野人","e":"🐗","i":"survivor/Wildling.webp"},{"id":22,"n":"曲芸師","e":"🤹","i":"survivor/Acrobat.webp"},{"id":23,"n":"一等航海士","e":"⚓","i":"survivor/FirstOfficer.webp"},{"id":24,"n":"バーメイド","e":"🥂","i":"survivor/Barmaid.webp"},{"id":25,"n":"ポストマン","e":"✉","i":"survivor/Postman.webp"},{"id":26,"n":"墓守","e":"🪦","i":"survivor/GraveKeeper.webp"},{"id":27,"n":"囚人","e":"⛓️","i":"survivor/Prisoner.webp"},{"id":28,"n":"昆虫学者","e":"🐛","i":"survivor/Entomologist.webp"},{"id":29,"n":"画家","e":"🎨","i":"survivor/Painter.webp"},{"id":30,"n":"バッツマン","e":"🏏","i":"survivor/Batter.webp"},{"id":31,"n":"玩具職人","e":"🧸","i":"survivor/ToyMerchant.webp"},{"id":32,"n":"患者","e":"❤️‍🩹","i":"survivor/Patient.webp"},{"id":33,"n":"心理学者","e":"❤","i":"survivor/Psychologist.webp"},{"id":34,"n":"小説家","e":"✍️","i":"survivor/Novelist.webp"},{"id":35,"n":"少女","e":"🎀","i":"survivor/LittleGirl.webp"},{"id":36,"n":"泣きピエロ","e":"🤡","i":"survivor/WeepingClown.webp"},{"id":37,"n":"教授","e":"🧪","i":"survivor/Professor.webp"},{"id":38,"n":"骨董商","e":"🪈","i":"survivor/Antiquarian.webp"},{"id":39,"n":"作曲家","e":"🎼","i":"survivor/Composer.webp"},{"id":40,"n":"記者","e":"📷","i":"survivor/Journalist.webp"},{"id":41,"n":"航空エンジニア","e":"🛩️","i":"survivor/Aeroplanist.webp"},{"id":42,"n":"応援団","e":"📣","i":"survivor/Cheerleader.webp"},{"id":43,"n":"人形師","e":"🎎","i":"survivor/Puppeteer.webp"},{"id":44,"n":"火災調査員","e":"🚒","i":"survivor/FireInvestigator.webp"},{"id":45,"n":"レディ・ファウロ","e":"🎲","i":"survivor/FaroLady.webp"},{"id":46,"n":"騎士","e":"⚔️","i":"survivor/Knight.webp"},{"id":47,"n":"気象学者","e":"🌦️","i":"survivor/Meteorologist.webp"},{"id":48,"n":"弓使い","e":"🏹","i":"survivor/Archer.webp"},{"id":49,"n":"脱出マスター","e":"🔓","i":"survivor/Escapologist.webp"},{"id":50,"n":"幻灯師","e":"🎞","i":"survivor/Lanternist.webp"},{"id":51,"n":"闘牛士","e":"🐂","i":"survivor/Matador.webp"},{"id":52,"n":"マイムアーティスト","e":"🎭","i":"survivor/MimeArtist.webp"},{"id":53,"n":"神童","e":"🌼","i":"survivor/Prodigy.webp"}]},"roles":[{"k":"rescue","n":"救助職","e":"🚀","ids":[4,7,15,18,21,23,26,30,32,33,36,40,41,43,46,49,53]},{"k":"harass","n":"牽制職","e":"👟","ids":[1,2,5,6,7,8,10,11,13,17,19,20,22,24,28,29,31,32,33,37,38,41,42,43,44,47,48,50,51,52,53]},{"k":"support","n":"補助職","e":"🤝","ids":[2,5,9,11,13,15,17,18,19,20,21,24,25,27,28,29,30,31,33,34,35,36,37,42,44,47,49,50,51,52,53]},{"k":"decode","n":"解読職","e":"🔧","ids":[3,12,14,16,27,39,45]}]};</script>
 <div id="gate"><div class="card" id="gateCard"></div></div>
 <div id="hist" hidden><div class="card" id="histCard"></div></div>
 <div id="theme" hidden><div class="card" id="themeCard"></div></div>
@@ -346,7 +368,57 @@
   var RAWMETA = null, FREE = false, RULEBUILT = "", FIRST_META = true;       // FREE＝大会BOTを使わない（だれでも作れる）チーム
   var cur = { tab: "fav", set: "1" };                       // tab："fav"（常用キャラ）か ラウンド番号。set：セットのキー
   var FACES = {};
-  var sel = null;                                            // クリックで持ち上げている名札 { id, from }
+  var FAVS = {};                                             // 誰かの得意キャラ：{キャラID: [選手の名前…]}。名札を描く前に作る
+  function favSet() {                                        // 選手が応募していない陣営のキャラは、常用キャラに入れられても、数えない（その陣営では参加できないため）
+    var o = {}, all = obj(STATE.fav);
+    (PLAYERS || []).forEach(function (p) {
+      var m = obj(all[p.id]);
+      Object.keys(m).forEach(function (id) {
+        if (!m[id] || !CH[id]) return;
+        if (p.f && p.f.indexOf(CH[id].f) < 0) return;
+        (o[id] = o[id] || []).push(p.n);
+      });
+    });
+    return o;
+  }
+  // ───────── 組み合わせ禁止（サバイバーのPICK）・名札の「理由」 ─────────
+  function charName(id) { return CH[id] ? CH[id].n : "キャラ" + id; }
+  function hardOf(s) { var o = {}; ["h", "s"].forEach(function (f) { ((s.req && s.req[f]) || []).forEach(function (r) { if (!r.g) o[r.id] = true; }); }); return o; }
+  function isSurvivorPick(f, b) { return (f === "s" && b === "pick") || (f === "h" && b === "epick"); }          // サバイバーを選ぶ枠（自陣営のPICK／相手のPICK予想）
+  function blockPickedMap(s, f, b) {                                                 // その枠に入っているキャラ（必須で自動に入るものも含む）
+    var m = {}, want = blockFaction(f, b), hard = hardOf(s);
+    Object.keys(obj(obj(obj(setState())[f])[b])).forEach(function (k) { var id = Number(k); if (CH[id]) m[id] = true; });
+    Object.keys(hard).forEach(function (k) { var id = Number(k); if (CH[id] && CH[id].f === want) m[id] = true; });
+    return m;
+  }
+  function comboState(s, picked, cap) {                                              // blocked＝いま選ぶと禁止の組み合わせになるキャラ／violated＝すでに禁止の組み合わせになっているキャラ
+    var blocked = {}, violated = {}, al = {};
+    ((s.al || {}).s || []).forEach(function (id) { al[id] = true; });                // ローカル許可を含む組み合わせは、対象外
+    function add(map, id, text) { (map[id] = map[id] || []).push(text); }
+    (s.cb || []).forEach(function (c) {
+      if (c.ids.some(function (id) { return al[id]; })) return;
+      var missing = c.ids.filter(function (id) { return !picked[id]; }), n = Object.keys(picked).length;
+      function others(id) { return c.ids.filter(function (x) { return x !== id; }).map(charName).join("・"); }
+      if (c.m === "p") {                                                             // 部分一致：組み合わせの全員がそろうと、禁止
+        if (missing.length === 1) add(blocked, missing[0], charName(missing[0]) + "は、" + others(missing[0]) + "と組み合わせ禁止キャラのためPICKできません。");
+        if (missing.length === 0) c.ids.forEach(function (id) { add(violated, id, charName(id) + "は、" + others(id) + "と組み合わせ禁止キャラです（この組み合わせはPICKできません）。"); });
+      } else if (cap && c.ids.length === cap) {                                      // 完全一致：その枠の全員が、この組み合わせとまったく同じになると、禁止
+        if (n === cap - 1 && missing.length === 1) add(blocked, missing[0], charName(missing[0]) + "を選ぶと、" + c.ids.map(charName).join("・") + "の組み合わせ（禁止）になるためPICKできません。");
+        if (n === cap && missing.length === 0) c.ids.forEach(function (id) { add(violated, id, c.ids.map(charName).join("・") + "の組み合わせは禁止されています。"); });
+      }
+    });
+    return { blocked: blocked, violated: violated };
+  }
+  function reqWhy(g) {
+    return g === "req" ? "ローカル必須キャラです。このセットで必ず使います（PICKの枠に自動で入ります）。"
+                       : "ローカル必須（組み合わせ" + g + "）のキャラです。同じ組のセットのうち、決まった回数、必ず使います。";
+  }
+  var SELS = [];                                             // クリックで持ち上げている名札（Shift＋クリックで、複数）：[{ id, ch, from }]
+  var MODS = { ctrl: false, shift: false };                  // クリックしたときの Ctrl（Macは⌘）・Shift
+  function isSel(id, from) { return SELS.some(function (s) { return s.id === id && sameFrom(s.from, from); }); }
+  function seq(i) { return Date.now() + (i || 0) / 1000; }   // 置いた順を、値に入れる（同時に置いたときは、選んだ順）
+  function placed(map, id) { var v = (map || {})[id]; return typeof v === "number" ? v : 0; }      // 以前の保存分（true）は、0＝いつもの並び
+  function byPlaced(map) { return function (a, b) { return placed(map, a) - placed(map, b) || a - b; }; }
 
   // スマホを縦に持っているときは、PCと同じ見た目の画面（幅1200）を90度回して、横向きに使う画面にする（画面の縦＝画面の横幅1200）
   var ROT = false, ROT_SCALE = 1;
@@ -448,9 +520,15 @@
   function problem(msg) {
     if (META) return;
     var w = $("work"); w.textContent = "";
-    w.appendChild(el("div", "empty-msg", msg));
+    var d = el("div", "empty-msg", msg); if (msg === DENIED) addContact(d);
+    w.appendChild(d);
   }
-  var DENIED = "読み取りが許可されていません。Firebaseの「ルール」がIDV TEAM LABの設定になっていない可能性があります。管理者に伝えてください。";
+  var DENIED = "読み取りが許可されていません。Firebaseの「ルール」がIDV TEAM LABの設定になっていない可能性があります。開発者に伝えてください。";
+  var CONTACT = "https://discord.gg/zDhvejkzSC";                                  // 開発者へのお問い合わせ（Discordサーバー）
+  function addContact(div) {                                                      // 「Discordサーバー：URL」を、文の後ろに足す（押せるリンク）
+    div.appendChild(document.createTextNode(" Discordサーバー："));
+    var a = el("a", "", CONTACT); a.href = CONTACT; a.target = "_blank"; a.rel = "noopener noreferrer"; div.appendChild(a);
+  }
   var WAITING = "このチームの場所がまだ用意されていません。しばらくしてから、開き直してください。";
   function stream(name, onData) {
     var data = null, url = DBURL + "/" + name + ".json", es = null, poll = null;
@@ -554,6 +632,7 @@
     PENDING.forEach(function (ev) { if (ev.k === "e") applyOps(ev.o); });
     if (RAWMETA) { if (!metaChanged() && META) fill(); }
     applyTheme();
+    LOGREADY = true; maybeInitFav();
     renderNewIds();
     var busyHist = document.activeElement && $("hist").contains(document.activeElement) && document.activeElement !== $("hist");
     if (!$("hist").hidden && !busyHist && histSig() !== HSIG) renderHist();      // 記録が増えたときだけ、作り直す（操作中は、作り直さない）
@@ -691,7 +770,31 @@
       return unseal(setup.check, key).then(function (o) { if (o && o.chk === "IDV-TEAM-LAB") { KEY = key; SETUP = setup; return true; } return false; });
     }).catch(function () { return false; });
   }
-  function askName(done) {                                                      // パスワードのあとに、自分の名前を決める（名前＋この端末の6文字が、履歴に出る）
+  function askName(done) {                                                      // この端末で、はじめて開いたとき：大会BOTのチームなら、名前の一覧から選ぶ
+    getRaw("meta").then(function (r) {
+      var m = r && r.ok ? r.data : null, ok = m && m.mode !== "free";
+      var ps = ok ? (m.players || []) : [], mg = ok ? (m.mgr || []) : [];
+      if (ps.length || mg.length) askWho(ps, mg, done); else askNameFree(done);
+    }).catch(function () { askNameFree(done); });
+  }
+  function askWho(ps, mg, done) {
+    gate(function (c) {
+      brand(c, "あなたは誰ですか？");
+      var w = el("div", "welcome"); w.appendChild(el("div", "", "あなたの名前を選んでください。履歴には「選んだ名前＋この端末のランダムな英数字6文字」が出ます。"));
+      c.appendChild(w);
+      function add(label, name, cls) {
+        var b = el("button", "who"); b.type = "button"; b.appendChild(el("span", cls || "", name)); b.appendChild(el("span", "tg", label));
+        b.addEventListener("click", function () { saveName(cleanName(name)); done(); });
+        c.appendChild(b);
+      }
+      ps.forEach(function (p) { add("選手", p.n, "pn " + (p.f || "")); });
+      mg.forEach(function (x) { add("マネージャー", x.n, ""); });
+      var other = el("button", "btn nogo", "この中にいない（名前を自分で決める）"); other.type = "button";
+      other.addEventListener("click", function () { askNameFree(done); });
+      c.appendChild(other);
+    });
+  }
+  function askNameFree(done) {                                                  // パスワードのあとに、自分の名前を決める（名前＋この端末の6文字が、履歴に出る）
     gate(function (c) {
       brand(c, "あなたの名前を決めてください");
       var w = el("div", "warn");
@@ -809,6 +912,15 @@
       box.style.backgroundPosition = (S / 2 - cx * sc) + "px " + (S / 2 - cy * sc) + "px";
     });
   }
+  var ROLEMARK = {}, ROLEMARK_SRC = null;
+  function roleMarks(id) {                                                            // このサバイバーの職業のマーク（複数あれば、すべて）。「職業なし」は、付けない
+    var groups = (META && META.roles) || [];
+    if (ROLEMARK_SRC !== groups) {
+      ROLEMARK_SRC = groups; ROLEMARK = {};
+      groups.forEach(function (g) { if (g.k === "none" || g.n === "職業なし") return; (g.ids || []).forEach(function (cid) { (ROLEMARK[cid] = ROLEMARK[cid] || []).push({ e: g.e, n: g.n }); }); });
+    }
+    return ROLEMARK[id] || [];
+  }
   function makeTag(ch, opt) {
     opt = opt || {};
     var t = el("div", "tag " + ch.f);
@@ -816,6 +928,20 @@
     var face = el("div", "face");
     t.appendChild(face);
     t.appendChild(el("div", "nm", ch.n));
+    if (FAVS[ch.id] && !opt.nofav) {                                                  // 誰かの得意キャラ：名札を少し明るく、左上に星
+      t.classList.add("fav");
+      var fs = el("span", "fstar", "★"); fs.title = "誰かの得意キャラ"; t.appendChild(fs);
+    }
+    var why = (opt.why || []).slice();
+    if (FAVS[ch.id] && !opt.nofav) why.push("★ " + FAVS[ch.id].join("・") + "さんの得意キャラです。");
+    if (opt.gray) t.classList.add("gray");
+    t._why = why;                                                                     // 長押しで、理由を見せる
+    var marks = ch.f === "s" ? roleMarks(ch.id) : [];
+    if (marks.length) {                                                               // 名札の右上
+      var rm = el("div", "rms"); rm.title = marks.map(function (m) { return m.n; }).join("・");
+      marks.forEach(function (m) { rm.appendChild(el("span", "", m.e)); });
+      t.appendChild(rm);
+    }
     paintFace(face, ch, 56);
     if (opt.req) t.classList.add("req");
     if (opt.bad) t.classList.add("bad");
@@ -842,7 +968,7 @@
       var sid = (p[1] || "").split("_"), r = (META && META.rounds || []).filter(function (x) { return String(x.no) === sid[0]; })[0];
       var s = r ? (r.sets || []).filter(function (x) { return x.k === sid[1]; })[0] : null, where = (r ? r.name : "") + (s ? " " + s.label : "");
       if (p[2] === "memo") return where + "：メモを書き換えた";
-      return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (p[3] === "ban" ? "BAN" : "PICK") + (add ? " に " : " から ") + ch(p[4]) + (add ? " を入れた" : " を外した");
+      return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[p[3]] || "PICK") + (add ? " に " : " から ") + ch(p[4]) + (add ? " を入れた" : " を外した");
     }
     return path;
   }
@@ -1005,7 +1131,7 @@
     cur.tab = tab;
     if (set) cur.set = set; else if (isRoundTab()) { var r = curRound(); cur.set = r && r.sets[0] ? r.sets[0].k : "1"; }
     try { sessionStorage.setItem("lab_tab_" + ID, JSON.stringify(cur)); } catch (e) { /* 無視 */ }
-    sel = null;
+    SELS = [];
     buildAll();
   }
 
@@ -1018,14 +1144,25 @@
   function attachTag(node, ch, from) {
     node.addEventListener("pointerdown", function (e) {
       if (e.button != null && e.button > 0) return;
-      var st = { ch: ch, from: from, x: e.clientX, y: e.clientY, started: false, node: node, pid: e.pointerId, touch: e.pointerType === "touch", timer: null, ghost: null };
+      var st = { ch: ch, from: from, x: e.clientX, y: e.clientY, cx: e.clientX, cy: e.clientY, started: false, node: node, pid: e.pointerId, touch: e.pointerType === "touch", timer: null, ghost: null, shift: !!e.shiftKey, group: null, whyTimer: null, explained: false };
       drag = st;
+      hideWhy();
+      if (node._why && node._why.length) st.whyTimer = setTimeout(function () {                    // 動かさずに長押し：なぜその表示なのか、説明する
+        if (drag !== st || Math.abs(st.cx - st.x) + Math.abs(st.cy - st.y) > 8) return;
+        st.explained = true;
+        if (st.started) { if (st.ghost) st.ghost.remove(); document.body.classList.remove("dragging"); drag = null; }       // 持ち上げかけていたら、やめる
+        showWhy(node);
+      }, 600);
       if (st.touch) st.timer = setTimeout(function () { if (drag === st) begin(st, st.x, st.y); }, 280);
     });
   }
   function begin(st, x, y) {
     st.started = true;
+    if (!st.touch) clearTimeout(st.whyTimer);                                          // マウス：動かしはじめたら、長押しの説明は出さない
+    var me = { id: st.ch.id, ch: st.ch, from: st.from };
+    st.group = isSel(me.id, me.from) ? SELS.slice() : (st.shift && SELS.length ? SELS.concat([me]) : [me]);          // 選んでいる名札を、まとめて動かす
     var g = st.node.cloneNode(true);
+    if (st.group.length > 1) g.appendChild(el("span", "gcount", "×" + st.group.length));
     g.className = g.className + " ghost" + (ROT ? " rot" : "");
     if (ROT) g.style.setProperty("--gs", String(ROT_SCALE * 1.08));
     st.ghost = g;
@@ -1033,6 +1170,21 @@
     moveGhost(st, x, y);
     document.body.classList.add("dragging");
   }
+  function hideWhy() { var o = document.getElementById("whyPop"); if (o) o.remove(); }
+  function showWhy(node) {                                                           // 名札の近くに、理由を出す
+    hideWhy();
+    var ch = null; var id = node.getAttribute("data-id"); if (id && CH[id]) ch = CH[id];
+    var pop = el("div"); pop.id = "whyPop";
+    pop.appendChild(el("b", "", ch ? ch.n : ""));
+    node._why.forEach(function (x) { pop.appendChild(el("div", "", x)); });
+    document.documentElement.appendChild(pop);
+    var r = node.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    var left = Math.max(6, Math.min(window.innerWidth - pw - 6, r.left)), top = r.bottom + 8;
+    if (top + ph > window.innerHeight - 6) top = Math.max(6, r.top - ph - 8);
+    pop.style.left = left + "px"; pop.style.top = top + "px";
+    setTimeout(hideWhy, 8000);
+  }
+  document.addEventListener("pointerdown", function (e) { if (!(e.target.closest && e.target.closest(".tag"))) hideWhy(); }, true);
   function moveGhost(st, x, y) { st.ghost.style.left = x + "px"; st.ghost.style.top = y + "px"; }
   function highlight(x, y) {
     var all = document.querySelectorAll(".over");
@@ -1044,6 +1196,7 @@
   document.addEventListener("pointermove", function (e) {
     var st = drag;
     if (!st) return;
+    st.cx = e.clientX; st.cy = e.clientY;
     if (!st.started) {
       var d = Math.abs(e.clientX - st.x) + Math.abs(e.clientY - st.y);
       if (st.touch) { if (d > 12) { clearTimeout(st.timer); drag = null; } return; }          // タッチは、長押しで持ち上げる（動いたらスクロール）
@@ -1057,37 +1210,48 @@
     var st = drag;
     if (!st) return;
     drag = null;
-    clearTimeout(st.timer);
+    clearTimeout(st.timer); clearTimeout(st.whyTimer);
+    if (st.explained) { document.body.classList.remove("dragging"); return; }                  // 長押しで説明を出したあとは、クリックにしない
     var all = document.querySelectorAll(".over");
     for (var i = 0; i < all.length; i++) all[i].classList.remove("over");
     $("pal").classList.remove("drop-ok");
     document.body.classList.remove("dragging");
     if (!st.started) {                                       // 動かさずに離した：クリック（持ち上げる／置く）
-      if (!cancelled) clickTag(st);
+      if (!cancelled) clickTag(st, e);
       return;
     }
     if (st.ghost) st.ghost.remove();
     if (cancelled) return;
     var t = dropTargetAt(e.clientX, e.clientY);
-    if (t) dropOn(st.ch, st.from, t);
+    if (t) dropMany(st.group || [{ id: st.ch.id, ch: st.ch, from: st.from }], t, !!(e.ctrlKey || e.metaKey));           // Ctrlを押しながら：複製
   }
   document.addEventListener("pointerup", function (e) { finish(e, false); });
   document.addEventListener("pointercancel", function (e) { finish(e, true); });
-  function clickTag(st) {
-    var same = sel && sel.id === st.ch.id && sameFrom(sel.from, st.from);
+  function clickTag(st, e) {
+    var me = { id: st.ch.id, ch: st.ch, from: st.from }, mine = isSel(me.id, me.from);
     var zone = st.node.closest ? st.node.closest("[data-drop]") : null;
-    if (sel && !same && zone) { dropOn(sel.ch, sel.from, zone); return; }          // 持ち上げている名札を、この枠に置く
-    sel = same ? null : { id: st.ch.id, ch: st.ch, from: st.from };
+    if (st.shift) {                                                                  // Shift＋クリック：選ぶ／選びなおす（複数）
+      SELS = mine ? SELS.filter(function (s) { return !(s.id === me.id && sameFrom(s.from, me.from)); }) : SELS.concat([me]);
+      fill();
+      return;
+    }
+    if (SELS.length && !mine && zone) { dropMany(SELS.slice(), zone, !!(e && (e.ctrlKey || e.metaKey))); return; }      // 持ち上げている名札を、この枠に置く（Ctrlなら複製）
+    SELS = mine && SELS.length === 1 ? [] : [me];
     fill();
   }
   $("pal").addEventListener("click", function (e) {                                  // 持ち上げている名札を、名札置き場へ（枠から外す）
-    if (sel && sel.from.kind !== "pal" && !(e.target.closest && e.target.closest(".tag"))) dropOn(sel.ch, sel.from, $("pal"));
+    var off = SELS.filter(function (s) { return s.from.kind !== "pal"; });
+    if (off.length && !(e.target.closest && e.target.closest(".tag"))) dropMany(off, $("pal"), false);
   });
+  document.addEventListener("click", function (e) { MODS = { ctrl: !!(e.ctrlKey || e.metaKey), shift: !!e.shiftKey }; }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && SELS.length) { SELS = []; fill(); } });          // Esc：選びなおし
   function sameFrom(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
 
   // 置き先（data-drop）：fav:選手ID ／ set:v:b（v＝見る側 h|s、b＝ban|pick）
   function opp(v) { return v === "h" ? "s" : "h"; }
-  function blockFaction(v, b) { return b === "ban" ? opp(v) : v; }          // BANは相手の陣営のキャラ、PICKは自分の陣営のキャラ
+  var BLK = { ban: "BAN", pick: "PICK", eban: "相手のBAN予想", epick: "相手のPICK予想" };
+  // 枠の種類 b：ban＝自陣営のBAN（相手陣営のキャラ）／pick＝自陣営のPICK（自陣営のキャラ）／eban＝相手のBAN予想（自陣営のキャラ）／epick＝相手のPICK予想（相手陣営のキャラ）
+  function blockFaction(v, b) { return b === "ban" || b === "epick" ? opp(v) : v; }
   function dropPath(spec) {
     var p = spec.split(":");
     if (p[0] === "fav") return "fav/" + p[1];
@@ -1101,37 +1265,50 @@
     var base = dropPath(from.spec);
     return base ? base + "/" + id : null;
   }
-  function dropOn(ch, from, target) {
-    var ops = {}, old = pathOfFrom(from, ch.id);
-    if (target.id === "pal") {                               // 名札置き場へ戻す：外す
-      if (old) { ops[old] = null; write(ops); }
-      sel = null; fill();
+  function dropMany(items, target, copy) {                                           // items：[{ id, ch, from }]。copy：複製（元の枠に残す）
+    var ops = {}, any = false;
+    if (target.id === "pal") {                                                       // 名札置き場へ戻す：外す
+      items.forEach(function (it) { var old = pathOfFrom(it.from, it.ch.id); if (old) { ops[old] = null; any = true; } });
+      SELS = [];
+      if (any) write(ops); else fill();
       return;
     }
     var spec = target.getAttribute("data-drop");
-    if (target.classList.contains("off")) return;
-    var parts = spec.split(":");
+    if (target.classList.contains("off") || !spec) return;
+    var parts = spec.split(":"), bad = null, i = 0;
     if (parts[0] === "gbx") {                                                        // GLOBAL BAN（手動で、足す）
-      if (ch.f !== parts[1]) { flash("この枠には" + (parts[1] === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。"); return; }
-      var gp = dropPath(spec) + "/" + ch.id;
-      var go1 = {}; go1[gp] = 1; if (old) go1[old] = null;
-      sel = null; write(go1); return;
-    }
-    if (parts[0] === "set" && ch.f !== blockFaction(parts[1], parts[2])) {
-      flash(parts[2] === "ban" ? (parts[1] === "s" ? "サバイバー目線のBANにはハンターのキャラを入れます。"
-                                                     : "ハンター目線のBANにはサバイバーのキャラを入れます。")
-                              : (parts[1] === "s" ? "サバイバー目線のPICKにはサバイバーのキャラを入れます。" : "ハンター目線のPICKにはハンターのキャラを入れます。"));
+      items.forEach(function (it) {
+        if (it.ch.f !== parts[1]) { bad = bad || it; return; }
+        var old = pathOfFrom(it.from, it.ch.id);
+        ops[dropPath(spec) + "/" + it.ch.id] = 1;
+        if (old && !copy) ops[old] = null;
+      });
+      if (bad) flash("この枠には" + (parts[1] === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。");
+      SELS = [];
+      if (Object.keys(ops).length) write(ops); else fill();
       return;
     }
     var path = dropPath(spec);
     if (!path) return;
-    var dest = path + "/" + ch.id;
-    if (dest === old) { sel = null; fill(); return; }
-    if (obj(getAt(path))[ch.id]) { if (old) { ops[old] = null; write(ops); } sel = null; fill(); return; }     // すでに入っている（同じ枠に同じ名札は入らない）
-    ops[dest] = true;
-    if (old) ops[old] = null;
-    sel = null;
-    write(ops);
+    var s0 = parts[0] === "set" ? curSet() : null, pk = null, comboWhy = null;
+    if (s0 && isSurvivorPick(parts[1], parts[2]) && (s0.cb || []).length) pk = blockPickedMap(s0, parts[1], parts[2]);        // 組み合わせ禁止のチェック用
+    items.forEach(function (it) {
+      if (parts[0] === "set" && it.ch.f !== blockFaction(parts[1], parts[2])) { bad = bad || it; return; }
+      if (pk && !pk[it.ch.id]) {
+        var cst = comboState(s0, pk, capOf(s0, parts[1], parts[2]));
+        if (cst.blocked[it.ch.id]) { comboWhy = comboWhy || cst.blocked[it.ch.id][0]; return; }
+        pk[it.ch.id] = true;
+      }
+      var old = pathOfFrom(it.from, it.ch.id), dest = path + "/" + it.ch.id;
+      if (dest === old) return;                                                      // 同じ枠の中：何もしない（複製もしない）
+      if (obj(getAt(path))[it.ch.id]) { if (old && !copy) ops[old] = null; return; }   // すでに入っている（同じ枠に同じ名札は入らない）
+      ops[dest] = seq(i++);                                                          // 置いた順
+      if (old && !copy) ops[old] = null;
+    });
+    if (bad) flash((parts[1] === "s" ? "サバイバー" : "ハンター") + "目線の" + BLK[parts[2]] + "には" + (blockFaction(parts[1], parts[2]) === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。");
+    else if (comboWhy) flash(comboWhy);
+    SELS = [];
+    if (Object.keys(ops).length) write(ops); else fill();
   }
   function getAt(path) {
     var node = STATE, segs = path.split("/");
@@ -1141,10 +1318,9 @@
   var flashTimer = null;
   function flash(msg) { var n = $("notice"); n.setAttribute("data-flash", msg); showNotice(); clearTimeout(flashTimer); flashTimer = setTimeout(function () { n.removeAttribute("data-flash"); showNotice(); }, 3500); }
 
-  function onDropClick(spec, node) {                         // 持ち上げている名札を、クリックで置く
-    if (!sel) return;
-    var st = sel;
-    dropOn(st.ch, st.from, node);
+  function onDropClick(spec, node) {                         // 持ち上げている名札を、クリックで置く（Ctrlを押していれば、複製）
+    if (!SELS.length) return;
+    dropMany(SELS.slice(), node, MODS.ctrl);
   }
 
   // ───────── 描画 ─────────
@@ -1156,6 +1332,18 @@
     fill();
   }
   var palFilter = "";
+  var palHide = { h: false, s: false };                      // 名札置き場の、折り畳み（この端末の表示の設定）
+  try { var ph = localStorage.getItem("lab_pal_hide") || ""; palHide.h = ph.indexOf("h") >= 0; palHide.s = ph.indexOf("s") >= 0; } catch (e) { /* 無視 */ }
+  function savePalHide() { try { localStorage.setItem("lab_pal_hide", (palHide.h ? "h" : "") + (palHide.s ? "s" : "")); } catch (e) { /* 無視 */ } }
+  function foldBtn(key, label, box, onPaint) {                // 「▼ ハンター」（押すと、たたむ／ひらく）
+    var b = el("button", "palhd"); b.type = "button";
+    function paint() { b.textContent = (palHide[key] ? "▶ " : "▼ ") + label; box.classList.toggle("collapsed", !!palHide[key]); if (onPaint) onPaint(!!palHide[key]); }
+    b.addEventListener("click", function () { palHide[key] = !palHide[key]; savePalHide(); paint(); });
+    paint();
+    return b;
+  }
+  var hSwap = false;                                         // ハンター目線の左右の入れ替え（この端末の表示の設定）
+  try { hSwap = localStorage.getItem("lab_hswap") === "1"; } catch (e) { /* 無視 */ }
   var roleSort = false;
   try { roleSort = localStorage.getItem("prep_role_sort") === "1"; } catch (e) { /* 無視 */ }
   function buildPalette() {
@@ -1164,18 +1352,24 @@
     q.addEventListener("input", function () { palFilter = q.value; fillPalette(); });
     pal.appendChild(q);
     pal.appendChild(el("div", "hint", "名札を右の枠へドラッグ（スマホは長押ししてから動かす／タップして選び、置きたい枠をタップ）。外すときはここへ戻すか ×。"));
-    pal.appendChild(el("h3", "", "ハンター"));
-    var bh = el("div", "palbox h"), gh = el("div", "grid"); gh.id = "palH"; bh.appendChild(gh); pal.appendChild(bh);
+    var bh = el("div", "palbox h"), gh = el("div", "grid"); gh.id = "palH"; bh.appendChild(gh);
+    pal.appendChild(foldBtn("h", "ハンター", bh)); pal.appendChild(bh);
+    var bs = el("div", "palbox s"), gs = el("div"); gs.id = "palS"; bs.appendChild(gs);
     var hs = el("div"); hs.style.cssText = "display:flex;align-items:center;gap:10px;flex:none";
-    hs.appendChild(el("h3", "", "サバイバー"));
     var lab = el("label", "palopt"), cb = el("input"); cb.type = "checkbox"; cb.id = "roleSort"; cb.checked = roleSort;
+    hs.appendChild(foldBtn("s", "サバイバー", bs, function (hid) { lab.style.display = hid ? "none" : ""; }));
     cb.addEventListener("change", function () { roleSort = cb.checked; try { localStorage.setItem("prep_role_sort", roleSort ? "1" : "0"); } catch (e) { /* 無視 */ } fillPalette(); });
     lab.appendChild(cb); lab.appendChild(document.createTextNode("職業ごとの並び替え"));
     hs.appendChild(lab); pal.appendChild(hs);
-    var bs = el("div", "palbox s"), gs = el("div"); gs.id = "palS"; bs.appendChild(gs); pal.appendChild(bs);
+    pal.appendChild(bs);
     fillPalette();
   }
-  function capOf(s, v, b) { return b === "ban" ? ((s.ban || {})[opp(v)] || 0) : ((s.pick || {})[v] || 0); }   // サバイバー目線のBAN＝ハンターを何キャラBANするか、ハンター目線のBAN＝サバイバーを何キャラBANするか
+  function capOf(s, v, b) {                                                          // 枠の人数。s.ban.h＝ハンターのキャラを何人BANするか、s.ban.s＝サバイバーのキャラを何人BANするか
+    if (b === "ban") return (s.ban || {})[opp(v)] || 0;                              // 自陣営のBAN：相手陣営のキャラを何人
+    if (b === "pick") return (s.pick || {})[v] || 0;
+    if (b === "eban") return (s.ban || {})[v] || 0;                                  // 相手のBAN予想：自陣営のキャラを何人
+    return (s.pick || {})[opp(v)] || 0;                                              // 相手のPICK予想：相手陣営のキャラを何人
+  }
   function pickedIds(rno, k, v) {                                                    // そのセットの、v目線のPICK（必須キャラの自動分も含む）
     var st = obj(obj(STATE.sets)[rno + "_" + k]), ids = Object.keys(obj(obj(st[v]).pick)).map(Number);
     var r = (META.rounds || []).filter(function (x) { return x.no === rno; })[0], s = r && (r.sets || []).filter(function (x) { return x.k === k; })[0];
@@ -1185,8 +1379,9 @@
   function lbSet(s) { var o = {}; ["h", "s"].forEach(function (f) { ((s.lb || {})[f] || []).forEach(function (id) { o[id] = true; }); }); return o; }
   function editableGb() { return FREE && !obj(rules()).detail; }                       // 自動の名札を、手で直せるのは、「セットごとに詳しく」にしていないとき
   function globalBase(v, r, s) {                                                      // 自動で入るもの：BOTが知っている使用済み ＋ このボードで、前のセットのPICKに入れたもの
-    var lbs = lbSet(s), out = [];
-    function add(id) { if (CH[id] && CH[id].f === v && out.indexOf(id) < 0 && !lbs[id]) out.push(id); }
+    var lbs = lbSet(s), out = [], als = {};
+    ((s.al || {})[v] || []).forEach(function (id) { als[id] = true; });                // ローカル許可のキャラは、使っても、GLOBAL BANに入らない
+    function add(id) { if (CH[id] && CH[id].f === v && out.indexOf(id) < 0 && !lbs[id] && !als[id]) out.push(id); }
     ((s.gb || {})[v] || []).forEach(add);
     if ((s.gbOn || {})[v]) { var i = (r.sets || []).indexOf(s); for (var j = 0; j < i; j++) pickedIds(r.no, r.sets[j].k, v).forEach(add); }
     return out;
@@ -1219,11 +1414,18 @@
     return out;
   }
   function fillPalette() {
-    var q = palFilter.trim().toLowerCase(), req = isRoundTab() ? reqIds() : {};
+    FAVS = favSet();
+    var q = palFilter.trim().toLowerCase(), req = isRoundTab() ? reqIds() : {}, gray = {};
+    if (isRoundTab()) {                                                               // 自陣営のサバイバーPICKで、組み合わせ禁止にかかるキャラは、灰色
+      var s0 = curSet();
+      if (s0 && (s0.cb || []).length) gray = comboState(s0, blockPickedMap(s0, "s", "pick"), capOf(s0, "s", "pick")).blocked;
+    }
     function addTag(box, c) {
       var ch = CH[c.id];
-      var t = makeTag(ch, { req: !!req[c.id] });
-      if (sel && sel.id === c.id && sel.from.kind === "pal") t.classList.add("sel");
+      var why = []; if (req[c.id]) why.push(reqWhy(req[c.id]));
+      if (gray[c.id]) why = why.concat(gray[c.id]);
+      var t = makeTag(ch, { req: !!req[c.id], gray: !!gray[c.id], why: why });
+      if (isSel(c.id, { kind: "pal" })) t.classList.add("sel");
       attachTag(t, ch, { kind: "pal" });
       box.appendChild(t);
     }
@@ -1308,6 +1510,14 @@
       sec.appendChild(el("h4", "", "📐 ルール設定"));
       sec.appendChild(el("div", "hint", "ルールは自動で入っています（ここでは変えられません）。名札は各セットのタブで入れます。"));
       box.appendChild(sec);
+      var ri = META.ri || null;
+      if (ri) {                                                                        // 全試合に共通のルール
+        var sg = el("div", "sec");
+        sg.appendChild(el("h4", "", "📌 全試合共通のルール"));
+        if ((ri.global || []).length) { var ug = el("ul"); ri.global.forEach(function (l) { ug.appendChild(el("li", "", l)); }); sg.appendChild(ug); }
+        else sg.appendChild(el("div", "hint", "全試合に共通のルールは、設定されていません。"));
+        box.appendChild(sg);
+      }
       (META.rounds || []).forEach(function (r) {
         var s2 = el("div", "sec");
         s2.appendChild(el("h5", "", r.name + (r.fmt ? "（" + r.fmt + "）" : "")));
@@ -1322,6 +1532,13 @@
           tb.appendChild(tr);
         });
         s2.appendChild(tb);
+        var rr = ri ? (ri.rounds || []).filter(function (x) { return x.round === r.no; })[0] : null;
+        if (rr) {                                                                      // このラウンドのルール（BAN人数の行は、上の表と同じなので、省く）
+          var rl = (rr.lines || []).filter(function (l) { return !/サバイバー\d+BAN \/ ハンター\d+BAN/.test(l); });
+          if (rl.length) { var ur = el("ul"); rl.forEach(function (l) { ur.appendChild(el("li", "", l)); }); s2.appendChild(ur); }
+          box.appendChild(s2);
+          return;
+        }
         var first = (r.sets || [])[0] || {};
         var lbn = ((first.lb || {}).h || []).concat((first.lb || {}).s || []).map(function (id) { return CH[id] ? CH[id].n : ""; }).filter(Boolean);
         if (lbn.length) s2.appendChild(el("div", "hint", "ローカルBAN（全試合で使えない）：" + lbn.join("、")));
@@ -1398,10 +1615,11 @@
   function fillLb() {
     var z = $("lbzone"); if (!z) return;
     z.textContent = "";
-    var ids = Object.keys(obj(rules().lb)).map(Number).filter(function (id) { return CH[id]; });
+    var ids = Object.keys(obj(rules().lb)).map(Number).filter(function (id) { return CH[id]; }).sort(byPlaced(rules().lb));      // 置いた順
     z.classList.toggle("empty", !ids.length);
     ids.forEach(function (id) {
       var tg = makeTag(CH[id], { onRemove: function () { var o = {}; o["rules/lb/" + id] = null; write(o); } });
+      if (isSel(id, { kind: "blk", spec: "rule:lb" })) tg.classList.add("sel");
       attachTag(tg, CH[id], { kind: "blk", spec: "rule:lb" });
       z.appendChild(tg);
     });
@@ -1423,7 +1641,7 @@
       if (!PLAYERS.length) w.appendChild(el("div", "empty-msg", FREE ? "「ルール設定」のタブで選手の名前を入れるとここに並びます。" : "選手が登録されるとここに並びます。"));
       PLAYERS.forEach(function (p) {
         var b = el("div", "box");
-        var h = el("h4", "", p.n); b.appendChild(h);
+        var h = el("h4"); h.appendChild(el("span", "pn " + (p.f || ""), p.n)); b.appendChild(h);        // サバイバー応募＝青／ハンター応募＝赤／両方＝紫
         var d = el("div", "drop"); d.setAttribute("data-drop", "fav:" + p.id); d.setAttribute("data-hint", "ここに名札を入れる");
         d.addEventListener("click", function () { onDropClick("fav:" + p.id, d); });
         b.appendChild(d); g.appendChild(b);
@@ -1437,28 +1655,38 @@
     w.appendChild(el("div", "hint", r.name + "（" + r.fmt + "）／" + s.label + "　サバイバー目線：ハンターBAN" + s.ban.h
       + "　／　ハンター目線：サバイバーBAN" + s.ban.s + "。GLOBAL BANは前のセットで使ったキャラが自動で入ります。"));
     var cs = el("div"); cs.id = "corners";
-    [["s", "サバイバー目線"], ["h", "ハンター目線"]].forEach(function (pair) {         // 中央がサバイバー目線、右がハンター目線
-      var v = pair[0], c = el("div", "corner " + v); c.appendChild(el("h3", "", pair[1]));
-      [["ban", "BAN"], ["pick", "PICK"], ["gb", editableGb() ? "GLOBAL BAN（自動。手で直せます）" : "GLOBAL BAN（自動）"]].forEach(function (bk) {
-        var b = bk[0], blk = el("div", "blk " + b);
-        var h = el("h4", "", bk[1]);
-        if (b !== "gb") h.appendChild(el("small", "", "（" + (blockFaction(v, b) === "h" ? "ハンター" : "サバイバー") + "のキャラ）"));
-        else h.appendChild(el("small", "", "（" + (v === "h" ? "ハンター" : "サバイバー") + "のキャラ）"));
-        var cnt = el("span", "cnt"); cnt.id = "cnt-" + v + "-" + b; h.appendChild(cnt); blk.appendChild(h);
-        var d = el("div", "drop");
-        d.id = "blk-" + v + "-" + b;
-        if (b === "gb") {
-          d.setAttribute("data-hint", (s.gbOn || {})[v] ? "前のセットで使ったキャラがここに入ります" : "このセットはGLOBAL BANなし");
-          if (editableGb()) { d.setAttribute("data-drop", "gbx:" + v); d.addEventListener("click", (function (spec, node) { return function () { onDropClick(spec, node); }; })("gbx:" + v, d)); }
-        }
-        else {
-          var cap = capOf(s, v, b);
-          if (cap === 0) { d.classList.add("off"); d.textContent = (b === "ban" ? "BAN" : "PICK") + "はできないセットです"; }
-          else { d.setAttribute("data-drop", "set:" + v + ":" + b); d.setAttribute("data-hint", "ここに名札を入れる"); d.addEventListener("click", (function (spec, node) { return function () { onDropClick(spec, node); }; })("set:" + v + ":" + b, d)); }
-        }
-        blk.appendChild(d); c.appendChild(blk);
+    [["s", "サバイバー目線"], ["h", "ハンター目線"]].forEach(function (pair) {         // 上：サバイバー目線／下：ハンター目線
+      var v = pair[0], c = el("div", "corner " + v), hd = el("div", "chd");
+      hd.appendChild(el("h3", "", pair[1]));
+      var row = el("div", "pair" + (v === "h" && hSwap ? " swap" : ""));
+      if (v === "h") {                                                                 // ハンター目線は、左右を入れ替えられる
+        var sw = el("button", "btn swapbtn", "⇄ 左右を入れ替える"); sw.type = "button";
+        sw.addEventListener("click", function () { hSwap = !hSwap; try { localStorage.setItem("lab_hswap", hSwap ? "1" : "0"); } catch (e) { /* 無視 */ } row.classList.toggle("swap", hSwap); });
+        hd.appendChild(sw);
+      }
+      c.appendChild(hd);
+      [["own", "自陣営", v, ["ban", "pick", "gb"]], ["enemy", "敵陣営", opp(v), ["eban", "epick"]]].forEach(function (sd) {      // 左：自陣営の情報／右：敵陣営の情報（予想）
+        var side = el("div", "side " + sd[0]);
+        side.appendChild(el("h5", "", sd[1] + "（" + (sd[2] === "h" ? "ハンター" : "サバイバー") + "）"));
+        sd[3].forEach(function (b) {
+          var blk = el("div", "blk " + b), h = el("h4", "", b === "gb" ? (editableGb() ? "GLOBAL BAN（自動。手で直せます）" : "GLOBAL BAN（自動）") : BLK[b]);
+          h.appendChild(el("small", "", "（" + ((b === "gb" ? v : blockFaction(v, b)) === "h" ? "ハンター" : "サバイバー") + "のキャラ）"));
+          var cnt = el("span", "cnt"); cnt.id = "cnt-" + v + "-" + b; h.appendChild(cnt); blk.appendChild(h);
+          var d = el("div", "drop");
+          d.id = "blk-" + v + "-" + b;
+          if (b === "gb") {
+            d.setAttribute("data-hint", (s.gbOn || {})[v] ? "前のセットで使ったキャラがここに入ります" : "このセットはGLOBAL BANなし");
+            if (editableGb()) { d.setAttribute("data-drop", "gbx:" + v); d.addEventListener("click", (function (spec, node) { return function () { onDropClick(spec, node); }; })("gbx:" + v, d)); }
+          } else {
+            var cap = capOf(s, v, b);
+            if (cap === 0) { d.classList.add("off"); d.textContent = BLK[b] + "はできないセットです"; }
+            else { d.setAttribute("data-drop", "set:" + v + ":" + b); d.setAttribute("data-hint", "ここに名札を入れる"); d.addEventListener("click", (function (spec, node) { return function () { onDropClick(spec, node); }; })("set:" + v + ":" + b, d)); }
+          }
+          blk.appendChild(d); side.appendChild(blk);
+        });
+        row.appendChild(side);
       });
-      cs.appendChild(c);
+      c.appendChild(row); cs.appendChild(c);
     });
     w.appendChild(cs);
     var memo = el("div"); memo.id = "memo";
@@ -1474,6 +1702,7 @@
   }
   function fill() {
     if (!META) return;
+    FAVS = favSet();
     fillPalette();
     if (cur.tab === "rules") {
       if (RULEBUILT !== rulesSig()) buildWork();
@@ -1485,11 +1714,11 @@
         if (!d) return;
         d.textContent = "";
         var ids = Object.keys(obj(obj(STATE.fav)[p.id])).map(Number).filter(function (id) { return CH[id]; });
-        ids.sort(function (a, b) { return (CH[a].f === CH[b].f ? 0 : CH[a].f === "h" ? -1 : 1) || a - b; });
+        ids.sort(byPlaced(obj(STATE.fav)[p.id]));                                      // 置いた順
         d.classList.toggle("empty", !ids.length);
         ids.forEach(function (id) {
-          var t = makeTag(CH[id], { onRemove: function () { var o = {}; o["fav/" + p.id + "/" + id] = null; write(o); } });
-          if (sel && sel.id === id && sel.from.spec === "fav:" + p.id) t.classList.add("sel");
+          var t = makeTag(CH[id], { nofav: !!(p.f && p.f.indexOf(CH[id].f) < 0), onRemove: function () { var o = {}; o["fav/" + p.id + "/" + id] = null; write(o); } });      // 応募していない陣営のキャラには、星も明るさも付けない
+          if (isSel(id, { kind: "blk", spec: "fav:" + p.id })) t.classList.add("sel");
           attachTag(t, CH[id], { kind: "blk", spec: "fav:" + p.id });
           d.appendChild(t);
         });
@@ -1500,33 +1729,44 @@
         var req = reqIds(), lb = lbIds(), st = setState(), rd = curRound();
         var gbv = {};
         ["s", "h"].forEach(function (f) { gbv[f] = {}; globalList(f, rd, s).forEach(function (id) { gbv[f][id] = true; }); });
-        var hard = {};                                                                  // ぜったい必須のキャラ（組の必須ではないもの）
-        ["h", "s"].forEach(function (f) { ((s.req && s.req[f]) || []).forEach(function (r) { if (!r.g) hard[r.id] = true; }); });
+        var hard = hardOf(s);                                                           // ぜったい必須のキャラ（組の必須ではないもの）
         [["s"], ["h"]].forEach(function (fa) {
           var f = fa[0];
-          ["ban", "pick"].forEach(function (b) {
+          ["ban", "pick", "eban", "epick"].forEach(function (b) {
             var d = $("blk-" + f + "-" + b);
             if (!d) return;
             var cap = capOf(s, f, b);
             if (cap === 0) return;                                                      // できない枠：そのまま
             var want = blockFaction(f, b);                                              // この枠に入るキャラの陣営
-            var auto = Object.keys(b === "pick" ? hard : lb).map(Number).filter(function (id) { return CH[id] && CH[id].f === want; });
-            var manual = Object.keys(obj(obj(st[f])[b])).map(Number).filter(function (id) { return CH[id] && auto.indexOf(id) < 0; });
-            var counted = manual.length + (b === "pick" ? auto.length : 0);               // ローカルBANは、BANの人数には、数えない（別のカウント）
+            var auto = Object.keys(b === "pick" || b === "epick" ? hard : lb).map(Number).filter(function (id) { return CH[id] && CH[id].f === want; });
+            var manual = Object.keys(obj(obj(st[f])[b])).map(Number).filter(function (id) { return CH[id] && auto.indexOf(id) < 0; }).sort(byPlaced(obj(obj(st[f])[b])));      // 置いた順
+            var counted = manual.length + (b === "pick" || b === "epick" ? auto.length : 0);               // ローカルBANは、BANの人数には、数えない（別のカウント）
             d.textContent = "";
             d.classList.toggle("empty", !manual.length && !auto.length);
             d.classList.toggle("exact", counted === cap);                                 // 人数がピッタリ揃った：枠線に、青いライン
-            auto.forEach(function (id) { d.appendChild(makeTag(CH[id], { locked: true, req: !!req[id], bad: b === "pick" && !!gbv[f][id] })); });      // 自動で入ったもの（外せない）
+            var cst = isSurvivorPick(f, b) && (s.cb || []).length ? comboState(s, blockPickedMap(s, f, b), cap) : { blocked: {}, violated: {} };      // 組み合わせ禁止
+            auto.forEach(function (id) {
+              var aw = [];
+              if (b === "pick" || b === "epick") aw.push(reqWhy("req") + "（自動で入っているので、外せません）");
+              else aw.push(charName(id) + "は、ローカルBANのキャラのため、自動でBANの枠に入っています（BANの人数には数えません）。");
+              if (b === "pick" && gbv[f][id]) aw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）です。");
+              d.appendChild(makeTag(CH[id], { locked: true, req: !!req[id], bad: b === "pick" && !!gbv[f][id], why: aw }));
+            });      // 自動で入ったもの（外せない）
             manual.forEach(function (id) {
               var spec = "set:" + f + ":" + b;
-              var isBad = b === "pick" ? !!gbv[f][id] : !!lb[id];                // PICKは使えないキャラだと、警告
-              var t = makeTag(CH[id], { req: !!req[id], bad: isBad, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
-              if (sel && sel.id === id && sel.from.spec === spec) t.classList.add("sel");
+              var isBad = b === "pick" ? !!gbv[f][id] : b === "epick" ? false : !!lb[id];                // PICKは使えないキャラだと、警告
+              var mw = [];
+              if (req[id]) mw.push(reqWhy(req[id]));
+              if (isBad && b === "pick") mw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。");
+              if (isBad && (b === "ban" || b === "eban")) mw.push(charName(id) + "は、ローカルBANのキャラです（BANしても意味がありません）。");
+              if (cst.violated[id]) mw = mw.concat(cst.violated[id]);
+              var t = makeTag(CH[id], { req: !!req[id], bad: isBad, gray: !!cst.violated[id], why: mw, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
+              if (isSel(id, { kind: "blk", spec: spec })) t.classList.add("sel");
               attachTag(t, CH[id], { kind: "blk", spec: spec });
               d.appendChild(t);
             });
             var c = $("cnt-" + f + "-" + b);
-            if (c) { c.textContent = counted + " / " + cap + (b === "ban" && auto.length ? "（＋ローカルBAN " + auto.length + "）" : ""); c.className = "cnt" + (counted > cap ? " over" : ""); }
+            if (c) { c.textContent = counted + " / " + cap + ((b === "ban" || b === "eban") && auto.length ? "（＋ローカルBAN " + auto.length + "）" : ""); c.className = "cnt" + (counted > cap ? " over" : ""); }
           });
           var g = $("blk-" + f + "-gb");
           if (g) {
@@ -1539,6 +1779,7 @@
                 var o = {}, auto = globalBase(f, rd, s).indexOf(id) >= 0;
                 o["rules/gbx/" + rd.no + "_" + s.k + "/" + f + "/" + id] = auto ? 0 : null; write(o);
               };
+              o2.why = [globalBase(f, rd, s).indexOf(id) >= 0 ? charName(id) + "は、前のセットで使ったキャラです（GLOBAL BAN）。このセットではPICKできません。" : charName(id) + "は、手で足したGLOBAL BANです。"];
               g.appendChild(makeTag(CH[id], o2));
             });
           }
@@ -1553,7 +1794,7 @@
     var n = $("notice"); n.textContent = "";
     var flashMsg = n.getAttribute("data-flash");
     if (flashMsg) n.appendChild(el("div", "bar err", flashMsg));
-    if (writeFailed) n.appendChild(el("div", "bar err", "保存できませんでした（通信が切れている、または Firebase のルールの設定が違います）。管理者に伝えてください。"));
+    if (writeFailed) { var wf = el("div", "bar err", "保存できませんでした（通信が切れている、または Firebase のルールの設定が違います）。開発者に伝えてください。"); addContact(wf); n.appendChild(wf); }
     var fresh = newIds();
     if (fresh.length) {                                                                // 知らない端末が、開きました
       var bar = el("div", "bar newid");
@@ -1569,6 +1810,19 @@
   }
 
   // ───────── 読み込み ─────────
+  var LOGREADY = false, FAVINIT_SENT = {};
+  function maybeInitFav() {                                                          // 大会BOTのチーム：選手登録の得意キャラを、常用キャラに入れる（選手ごとに、1回だけ。あとで消しても、戻さない）
+    if (!LOGREADY || FREE || !META || WIPED || !KEY) return;
+    var ops = {}, any = false, i = 0;
+    (META.players || []).forEach(function (p) {
+      if (!p || p.id == null || !(p.fav || []).length) return;
+      if (obj(STATE.favinit)[p.id] || FAVINIT_SENT[p.id]) return;
+      FAVINIT_SENT[p.id] = true; any = true;
+      p.fav.forEach(function (cid) { if (CH[cid] && !obj(obj(STATE.fav)[p.id])[cid]) ops["fav/" + p.id + "/" + cid] = seq(i++); });
+      ops["favinit/" + p.id] = 1;
+    });
+    if (any) write(ops);
+  }
   function onMeta(m) {
     if (!m) { if (!META) setStatus("データを待っています…（準備ができると表示されます）", ""); return; }
     RAWMETA = m;
@@ -1582,6 +1836,7 @@
     if (isRoundTab() && !curSet()) cur.set = (curRound().sets[0] || {}).k;
     var memoFocused = document.activeElement && document.activeElement.id === "memoText";
     if (memoFocused) { buildTabs(); buildPalette(); fill(); } else buildAll();
+    maybeInitFav();
   }
   var savedTab = false;
   try { var saved = JSON.parse(sessionStorage.getItem("lab_tab_" + ID) || "null"); if (saved && saved.tab) { cur = saved; savedTab = true; } } catch (e) { /* 無視 */ }
