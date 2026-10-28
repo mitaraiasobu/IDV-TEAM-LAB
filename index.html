@@ -86,8 +86,8 @@
   .slotctl .sn { color: var(--text); font-size: 13px; }
   .sbtn { appearance: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 6px; width: 24px; height: 22px; line-height: 1; font-size: 14px; cursor: pointer; padding: 0; }
   .sbtn:hover { border-color: var(--ac); }
-  .slots { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }                                                       /* スロットは、横に並ぶ列 */
-  .slotcol { flex: 0 0 auto; width: 98px; display: flex; flex-direction: column; gap: 4px; }
+  .slots { display: flex; flex-wrap: nowrap; gap: 6px; align-items: flex-start; overflow-x: auto; }                                                       /* スロットは、横に並ぶ列 */
+  .slotcol { flex: 1 1 0; min-width: 66px; max-width: 98px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .slotcol .psel, .slotcol .pname { width: 100%; font: inherit; font-size: 12px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 4px; text-align: center; }
   .slotcol .pname { color: var(--sub); background: none; border-style: dashed; }
   .drop.col { flex-direction: column; flex-wrap: nowrap; align-items: center; min-height: 100px; }                                      /* キャラは、縦に並ぶ */
@@ -1034,6 +1034,7 @@
     function ch(id) { return CH[id] ? CH[id].n : "キャラ" + id; }
     if (p[0] === "rules") return "ルール設定を変えた";
     if (p[0] === "theme") return "デザインを変えた";
+    if (p[0] === "cfg") return "スロットモードを" + (add ? "オフにした" : "オンにした");
     if (p[0] === "fav") { var pl = PLAYERS.filter(function (x) { return String(x.id) === p[1]; })[0]; return "常用キャラ：" + (pl ? pl.n : "選手") + (add ? " に " : " から ") + ch(p[2]) + (add ? " を入れた" : " を外した"); }
     if (p[0] === "sets") {
       var sid = (p[1] || "").split("_"), r = (META && META.rounds || []).filter(function (x) { return String(x.no) === sid[0]; })[0];
@@ -1335,10 +1336,11 @@
   // 枠の種類 b：ban＝自陣営のBAN（相手陣営のキャラ）／pick＝自陣営のPICK（自陣営のキャラ）／eban＝相手のBAN予想（自陣営のキャラ）／epick＝相手のPICK予想（相手陣営のキャラ）
   function baseB(b) { return String(b).replace(/\d+$/, ""); }                       // pick2 → pick（スロット2の名前から、基本の名前へ）
   function blockFaction(v, b) { b = baseB(b); return b === "ban" || b === "epick" ? opp(v) : v; }
-  function slotCount(v, base) { var n = Number(obj(obj(obj(setState())[v]).slots)[base]); return n >= 2 ? Math.min(Math.floor(n), 6) : 1; }          // PICKのスロットの数
+  function slotMode() { return !obj(STATE.cfg).slotoff; }                           // スロットモードを使うか（LAB全員で共通。オフでも、スロットのデータは消さない）
+  function slotCount(v, base) { if (!slotMode()) return 1; var n = Number(obj(obj(obj(setState())[v]).slots)[base]); return n >= 2 ? Math.min(Math.floor(n), 6) : 1; }          // PICKのスロットの数
   function slotNames(v, base) { var n = slotCount(v, base), out = [base]; for (var i = 2; i <= n; i++) out.push(base + i); return out; }
   var SLOTSIG = "";
-  function slotSig() { return JSON.stringify([setId(), slotCount("s", "pick"), slotCount("s", "epick"), slotCount("h", "pick"), slotCount("h", "epick")]); }
+  function slotSig() { return JSON.stringify([setId(), slotMode(), slotCount("s", "pick"), slotCount("s", "epick"), slotCount("h", "pick"), slotCount("h", "epick")]); }
   function dropPath(spec) {
     var p = spec.split(":");
     if (p[0] === "fav") return "fav/" + p[1];
@@ -1795,6 +1797,10 @@
     var r = curRound();
     w.appendChild(el("div", "hint", r.name + "（" + r.fmt + "）／" + s.label + "　サバイバー目線：ハンターBAN" + s.ban.h
       + "　／　ハンター目線：サバイバーBAN" + s.ban.s + "。GLOBAL BANは前のセットで使ったキャラが自動で入ります。"));
+    var sm = el("label", "palopt"), smc = el("input"); smc.type = "checkbox"; smc.checked = slotMode();
+    smc.addEventListener("change", function () { var o = {}; o["cfg/slotoff"] = smc.checked ? null : 1; write(o); });
+    sm.appendChild(smc); sm.appendChild(document.createTextNode("スロットモード（PICKを、選手ごとのスロットに分けて試す。オフにすると、ふつうのPICK欄になります。LAB全員に反映）"));
+    w.appendChild(sm);
     var cs = el("div"); cs.id = "corners";
     function fname(f) { return f === "h" ? "ハンター" : "サバイバー"; }
     function blockTitle(v, b) {
@@ -1823,7 +1829,8 @@
           var isPick = b === "pick" || b === "epick", cap = (b === "gb" || b === "egb") ? 1 : capOf(s, v, b);
           if (!isPick) h.appendChild(el("small", "", "（" + fname(b === "gb" ? v : b === "egb" ? opp(v) : blockFaction(v, b)) + "のキャラ）"));
           var n = isPick ? slotCount(v, b) : 1;
-          if (isPick && cap > 0) {                                                       // スロット：PICKの編成を、いくつも作って試せる（＋で増やす・－で減らす）
+          var useSlots = isPick && cap > 0 && slotMode();
+          if (useSlots) {                                                                // スロット：PICKの編成を、いくつも作って試せる（＋で増やす・－で減らす）
             var sc = el("span", "slotctl");
             sc.appendChild(document.createTextNode("スロット"));
             sc.appendChild(el("b", "sn", String(n)));
@@ -1838,7 +1845,7 @@
             h.appendChild(sc);
           }
           var cnt = el("span", "cnt"); cnt.id = "cnt-" + v + "-" + b; h.appendChild(cnt); blk.appendChild(h);
-          if (isPick && cap > 0) {
+          if (useSlots) {
             var cols = el("div", "slots");                                               // スロットは、横に並ぶ列（上：選手名／下：キャラ。縦に並ぶ）
             slotNames(v, b).forEach(function (nm) {
               var col = el("div", "slotcol");
@@ -1918,9 +1925,9 @@
         });
         var hard = hardOf(s);                                                           // ぜったい必須のキャラ（組の必須ではないもの）
         var plSig = (PLAYERS || []).map(function (p) { return p.id + ":" + p.n + ":" + (p.f || ""); }).join("|");
-        function fillSel(sl, f) {                                                       // 選手名の選択肢：この陣営に応募している選手を先に
+        function fillSel(sl, f) {                                                       // 選手名の選択肢：この陣営に応募している選手だけ（大会BOTの選手は、応募していない陣営の枠には出さない）
           if (sl.getAttribute("data-sig") === plSig + f) return;
-          var ps = (PLAYERS || []).slice().sort(function (a, b) { return (b.f && b.f.indexOf(f) >= 0 ? 1 : 0) - (a.f && a.f.indexOf(f) >= 0 ? 1 : 0); });
+          var ps = (PLAYERS || []).filter(function (p) { return !p.f || p.f.indexOf(f) >= 0; });
           sl.textContent = "";
           var o0 = el("option", "", "（選手を選ぶ）"); o0.value = ""; sl.appendChild(o0);
           ps.forEach(function (p) { var o = el("option", "", p.n); o.value = String(p.id); sl.appendChild(o); });
