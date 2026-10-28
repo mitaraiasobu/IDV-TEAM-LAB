@@ -87,10 +87,10 @@
   .slotctl .sn { color: var(--text); font-size: 13px; }
   .sbtn { appearance: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 6px; width: 24px; height: 22px; line-height: 1; font-size: 14px; cursor: pointer; padding: 0; }
   .sbtn:hover { border-color: var(--ac); }
-  .slots { display: flex; flex-wrap: nowrap; gap: 6px; align-items: flex-start; overflow-x: auto; }                                                       /* スロットは、横に並ぶ列 */
-  .slotcol { flex: 1 1 0; min-width: 66px; max-width: 98px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
-  .slotcol .psel, .slotcol .pname { width: 100%; font: inherit; font-size: 12px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 4px; text-align: center; }
-  .slotcol .pname { color: var(--sub); background: none; border-style: dashed; }
+  .pgrid { display: grid; gap: 6px; align-items: start; overflow-x: auto; }                                                       /* 選手の縦列（必ず横に並ぶ）× 編成パターンの行（増やすと、下へ増える） */
+  .pgrid .psel, .pgrid .pname { width: 100%; font: inherit; font-size: 12px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 4px; text-align: center; }
+  .pgrid .pname { color: var(--sub); background: none; border-style: dashed; }
+  .drop.cell { min-height: 84px; justify-content: center; }
   .drop.col { flex-direction: column; flex-wrap: nowrap; align-items: center; min-height: 100px; }                                      /* キャラは、縦に並ぶ */
   .tag.sel { outline: 3px solid #fff; }
   .ghost .gcount { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); background: var(--ac); color: var(--ac-on); font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 10px; }
@@ -400,9 +400,10 @@
   function charName(id) { return CH[id] ? CH[id].n : "キャラ" + id; }
   function hardOf(s) { var o = {}; ["h", "s"].forEach(function (f) { ((s.req && s.req[f]) || []).forEach(function (r) { if (!r.g) o[r.id] = true; }); }); return o; }
   function isSurvivorPick(f, b) { b = baseB(b); return (f === "s" && b === "pick") || (f === "h" && b === "epick"); }          // サバイバーを選ぶ枠（自陣営のPICK／相手のPICK予想）
-  function blockPickedMap(s, f, b) {                                                 // その枠に入っているキャラ（必須で自動に入るものも含む）
-    var m = {}, want = blockFaction(f, b), hard = hardOf(s);
-    Object.keys(obj(obj(obj(setState())[f])[b])).forEach(function (k) { var id = Number(k); if (CH[id]) m[id] = true; });
+  function blockPickedMap(s, f, b) {                                                 // その枠（スロットなら、同じ行＝1つの編成）に入っているキャラ（必須で自動に入るものも含む）
+    var m = {}, want = blockFaction(f, b), hard = hardOf(s), cm = parseCell(b);
+    if (cm) m = rowPlaced(f, cm.base, cm.r, capOf(s, f, cm.base));
+    else Object.keys(obj(obj(obj(setState())[f])[b])).forEach(function (k) { var id = Number(k); if (CH[id]) m[id] = true; });
     Object.keys(hard).forEach(function (k) { var id = Number(k); if (CH[id] && CH[id].f === want) m[id] = true; });
     return m;
   }
@@ -1043,9 +1044,9 @@
       if (p[2] === "memo") return where + "：メモを書き換えた";
       if (p[3] === "memo") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + "のメモを書き換えた";
       if (p[3] === "slots") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[p[4]] || "PICK") + "のスロットの数を変えた";
-      if (p[3] === "pl") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " PICKのスロットの選手名を変えた";
-      var bn = baseB(p[3] || ""), sn = (p[3] || "").replace(/^\D+/, "");
-      return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[bn] || "PICK") + (sn ? "（スロット" + sn + "）" : "") + (add ? " に " : " から ") + ch(p[4]) + (add ? " を入れた" : " を外した");
+      if (p[3] === "pl") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " PICKの選手名を変えた";
+      var bn = baseB(p[3] || ""), cm0 = parseCell(p[3] || ""), sn = cm0 ? "スロット" + cm0.r + "・" + cm0.c + "番目" : "";
+      return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[bn] || "PICK") + (sn ? "（" + sn + "）" : "") + (add ? " に " : " から ") + ch(p[4]) + (add ? " を入れた" : " を外した");
     }
     return path;
   }
@@ -1347,7 +1348,19 @@
   function blockFaction(v, b) { b = baseB(b); return b === "ban" || b === "epick" ? opp(v) : v; }
   function slotMode() { return !obj(STATE.cfg).slotoff; }                           // スロットモードを使うか（LAB全員で共通。オフでも、スロットのデータは消さない）
   function slotCount(v, base) { if (!slotMode()) return 1; var n = Number(obj(obj(obj(setState())[v]).slots)[base]); return n >= 2 ? Math.min(Math.floor(n), 6) : 1; }          // PICKのスロットの数
-  function slotNames(v, base) { var n = slotCount(v, base), out = [base]; for (var i = 2; i <= n; i++) out.push(base + i); return out; }
+  function cellName(base, r, c) { return base + r + c; }                              // スロットr行の、c番目の選手の枠（例：pick12＝1行目の2番目の選手）
+  function parseCell(nm) { var m = /^(e?pick)([1-6])([1-9])$/.exec(nm); return m ? { base: m[1], r: Number(m[2]), c: Number(m[3]) } : null; }
+  function slotNames(v, base) {                                                      // スロットモード：すべての枠（行×選手の列）／オフ：PICKの1つの枠
+    if (!slotMode()) return [base];
+    var s = curSet(), P = Math.max(1, s ? capOf(s, v, base) : 1), R = slotCount(v, base), out = [];
+    for (var r = 1; r <= R; r++) for (var c = 1; c <= P; c++) out.push(cellName(base, r, c));
+    return out;
+  }
+  function rowPlaced(v, base, r, P) {                                                // r行目（1つの編成）に、いま入っているキャラ
+    var m = {}, stv = obj(obj(setState())[v]);
+    for (var c = 1; c <= P; c++) Object.keys(obj(stv[cellName(base, r, c)])).forEach(function (k) { if (obj(stv[cellName(base, r, c)])[k] && CH[Number(k)]) m[Number(k)] = true; });
+    return m;
+  }
   var SLOTSIG = "";
   function slotSig() { return JSON.stringify([setId(), slotMode(), slotCount("s", "pick"), slotCount("s", "epick"), slotCount("h", "pick"), slotCount("h", "epick")]); }
   function dropPath(spec) {
@@ -1388,8 +1401,9 @@
     }
     var path = dropPath(spec);
     if (!path) return;
+    if (parts[0] === "set" && parseCell(parts[2])) { dropCell(items, parts, path, copy); return; }
     var isSet = parts[0] === "set", bb = isSet ? baseB(parts[2]) : "", s0 = isSet ? curSet() : null, capVal = isSet ? capOf(s0, parts[1], parts[2]) : 0;
-    var slotFixed = isSet && (bb === "pick" || bb === "epick") && slotCount(parts[1], bb) > 1;                  // スロットがあるときは、PICKの人数ぴったりに固定
+    var slotFixed = false;
     var combo = isSet && s0 && isSurvivorPick(parts[1], bb) && (s0.cb || []).length;
     var pk = isSet && s0 && (slotFixed || combo) ? blockPickedMap(s0, parts[1], parts[2]) : null;
     var gbIds = {}; if (isSet && bb === "pick" && s0) globalList(parts[1], curRound(), s0).forEach(function (id) { gbIds[id] = true; });          // 前のセットで使ったキャラ
@@ -1421,6 +1435,28 @@
     SELS = []; HILITE = null;
     if (Object.keys(ops).length) write(ops); else fill();
   }
+  function dropCell(items, parts, path, copy) {                                      // スロットの枠：1つの枠に、キャラは1人（入っていたら、置き換える）
+    var s0 = curSet(), f = parts[1], cm = parseCell(parts[2]), P = capOf(s0, f, cm.base), it = items[0], id = it.ch.id, ops = {}, msg = null;
+    var old = pathOfFrom(it.from, id), cur = obj(getAt(path));
+    if (items.length > 1) msg = "1つのスロットには、キャラは1人です。";
+    else if (it.ch.f !== blockFaction(f, cm.base)) msg = (f === "s" ? "サバイバー" : "ハンター") + "目線の" + BLK[cm.base] + "には" + (blockFaction(f, cm.base) === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。";
+    else if (old !== path + "/" + id) {
+      var row = blockPickedMap(s0, f, parts[2]), placed = rowPlaced(f, cm.base, cm.r, P), gb = {}, hd = hardOf(s0);
+      Object.keys(cur).forEach(function (k) { if (!hd[k]) delete row[k]; delete placed[k]; });          // 置き換えるので、いまの中身は数えない
+      if (cm.base === "pick") globalList(f, curRound(), s0).forEach(function (g) { gb[g] = true; });
+      if (gb[id]) msg = charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。";
+      else if (placed[id]) msg = charName(id) + "は、この編成（同じ行）にすでに入っています。";
+      else if (isSurvivorPick(f, cm.base) && (s0.cb || []).length) { var cst = comboState(s0, row, P); if (cst.blocked[id]) msg = cst.blocked[id][0]; }
+      if (!msg) {
+        Object.keys(cur).forEach(function (k) { ops[path + "/" + k] = null; });
+        ops[path + "/" + id] = Date.now();
+        if (old && !copy) ops[old] = null;
+      }
+    }
+    if (msg) flash(msg);
+    SELS = []; HILITE = null;
+    if (Object.keys(ops).length) write(ops); else fill();
+  }
   function getAt(path) {
     var node = STATE, segs = path.split("/");
     for (var i = 0; i < segs.length; i++) { if (node == null || typeof node !== "object") return null; node = node[segs[i]]; }
@@ -1433,8 +1469,8 @@
     if (!SELS.length) {                                                              // 何も持ち上げていないとき：選手名が入っているスロットで、まだ空きがあれば、その選手の得意キャラを、名札置き場で強調する
       var pr = spec.split(":");
       if (pr[0] === "set" && baseB(pr[2]) === "pick") {
-        var sl = $("psel-" + pr[1] + "-" + pr[2]), pid = sl && sl.value ? sl.value : null, cs0 = curSet();
-        if (pid && cs0 && node.querySelectorAll(".tag").length < capOf(cs0, pr[1], pr[2])) {
+        var cm1 = parseCell(pr[2]), sl = $("psel-" + pr[1] + "-" + (cm1 ? cm1.base + cm1.c : pr[2])), pid = sl && sl.value ? sl.value : null, cs0 = curSet();
+        if (pid && cs0 && node.querySelectorAll(".tag").length < (cm1 ? 1 : capOf(cs0, pr[1], pr[2]))) {
           HILITE = pid; fillPalette();
           flash((((PLAYERS || []).filter(function (x) { return String(x.id) === String(pid); })[0]) || { n: "選手" }).n + "さんの得意キャラを、名札置き場で強調しています（Escで解除）。");
         }
@@ -1500,6 +1536,7 @@
   }
   function pickedIds(rno, k, v) {                                                    // そのセットの、v目線のPICK（必須キャラの自動分も含む）
     var st = obj(obj(STATE.sets)[rno + "_" + k]), ids = Object.keys(obj(obj(st[v]).pick)).map(Number);
+    Object.keys(obj(st[v])).forEach(function (nm) { var cm = parseCell(nm); if (cm && cm.base === "pick" && cm.r === 1) Object.keys(obj(obj(st[v])[nm])).forEach(function (id) { if (obj(obj(st[v])[nm])[id]) ids.push(Number(id)); }); });          // スロットモード：1行目（最初の編成）を、使ったキャラとする
     var r = (META.rounds || []).filter(function (x) { return x.no === rno; })[0], s = r && (r.sets || []).filter(function (x) { return x.k === k; })[0];
     if (s) ((s.req && s.req[v]) || []).forEach(function (q) { if (!q.g && ids.indexOf(q.id) < 0) ids.push(q.id); });
     return ids.filter(function (id) { return CH[id] && CH[id].f === v; });
@@ -1843,31 +1880,33 @@
             var sc = el("span", "slotctl");
             sc.appendChild(document.createTextNode("スロット"));
             sc.appendChild(el("b", "sn", String(n)));
-            var plus = el("button", "sbtn", "＋"); plus.type = "button"; plus.title = "スロットを増やす（PICKの編成を、もう1つ作る）";
+            var plus = el("button", "sbtn", "＋"); plus.type = "button"; plus.title = "スロットを増やす（編成パターンを、もう1行作る）";
             plus.addEventListener("click", function () { var o = {}; o["sets/" + setId() + "/" + v + "/slots/" + b] = Math.min(6, slotCount(v, b) + 1); write(o); });
             sc.appendChild(plus);
             if (n > 1) {
-              var minus = el("button", "sbtn", "－"); minus.type = "button"; minus.title = "スロットを減らす（いちばん右（下）のスロットを消す）";
-              minus.addEventListener("click", function () { var k = slotCount(v, b), o = {}; if (k <= 1) return; o["sets/" + setId() + "/" + v + "/slots/" + b] = k - 1; o["sets/" + setId() + "/" + v + "/" + b + k] = null; o["sets/" + setId() + "/" + v + "/pl/" + b + k] = null; write(o); });
+              var minus = el("button", "sbtn", "－"); minus.type = "button"; minus.title = "スロットを減らす（いちばん下の行を消す）";
+              minus.addEventListener("click", function () { var k = slotCount(v, b), o = {}; if (k <= 1) return; o["sets/" + setId() + "/" + v + "/slots/" + b] = k - 1; for (var c0 = 1; c0 <= cap; c0++) o["sets/" + setId() + "/" + v + "/" + cellName(b, k, c0)] = null; write(o); });
               sc.appendChild(minus);
             }
             h.appendChild(sc);
           }
           var cnt = el("span", "cnt"); cnt.id = "cnt-" + v + "-" + b; h.appendChild(cnt); blk.appendChild(h);
           if (useSlots) {
-            var cols = el("div", "slots");                                               // スロットは、横に並ぶ列（上：選手名／下：キャラ。縦に並ぶ）
-            slotNames(v, b).forEach(function (nm) {
-              var col = el("div", "slotcol");
-              if (b === "pick") {                                                        // 自陣営：このスロットの選手を選ぶ（誰がどのキャラを使うか）
-                var sl = el("select", "psel"); sl.id = "psel-" + v + "-" + nm;
-                sl.addEventListener("change", function () { var o = {}; o["sets/" + setId() + "/" + v + "/pl/" + nm] = sl.value ? Number(sl.value) : null; writeQuiet(o); HILITE = null; fillPalette(); });
-                col.appendChild(sl);
-              } else col.appendChild(el("div", "pname", "相手" + (nm === b ? "" : "-" + nm.slice(b.length))));
-              var d = el("div", "drop col"); d.id = "blk-" + v + "-" + nm;
-              d.setAttribute("data-drop", "set:" + v + ":" + nm); d.setAttribute("data-hint", "ここに名札を入れる");
+            var cols = el("div", "pgrid");                                               // 上：選手（縦の列は、その選手のもの。必ず横に並ぶ）／その下：スロット（編成パターン）の行
+            cols.style.gridTemplateColumns = "repeat(" + cap + ", minmax(66px, 1fr))";
+            for (var c1 = 1; c1 <= cap; c1++) (function (c) {
+              if (b === "pick") {                                                        // 自陣営：この列の選手を選ぶ（ずっとその選手の列）
+                var sl = el("select", "psel"); sl.id = "psel-" + v + "-" + b + c;
+                sl.addEventListener("change", function () { var o = {}; o["sets/" + setId() + "/" + v + "/pl/" + b + c] = sl.value ? Number(sl.value) : null; writeQuiet(o); HILITE = null; fillPalette(); });
+                cols.appendChild(sl);
+              } else cols.appendChild(el("div", "pname", "相手" + c));
+            })(c1);
+            for (var r1 = 1; r1 <= n; r1++) for (var c2 = 1; c2 <= cap; c2++) {
+              var nm = cellName(b, r1, c2), d = el("div", "drop col cell"); d.id = "blk-" + v + "-" + nm;
+              d.setAttribute("data-drop", "set:" + v + ":" + nm); d.setAttribute("data-hint", n > 1 ? "枠" + r1 : "ここに名札");
               clickDrop("set:" + v + ":" + nm, d);
-              col.appendChild(d); cols.appendChild(col);
-            });
+              cols.appendChild(d);
+            }
             blk.appendChild(cols);
           } else {
             var d2 = el("div", "drop"); d2.id = "blk-" + v + "-" + b;
@@ -1942,10 +1981,43 @@
           ps.forEach(function (p) { var o = el("option", "", p.n); o.value = String(p.id); sl.appendChild(o); });
           sl.setAttribute("data-sig", plSig + f);
         }
+        function fillCell(f, base, nm, cst0) {                                          // スロットの1つの枠（1キャラ）
+          var d = $("blk-" + f + "-" + nm);
+          if (!d) return;
+          var spec = "set:" + f + ":" + nm, mapB = obj(obj(st[f])[nm]);
+          var ids = Object.keys(mapB).map(Number).filter(function (id) { return CH[id] && mapB[id]; }).sort(byPlaced(mapB));
+          d.textContent = "";
+          d.classList.toggle("empty", !ids.length);
+          ids.forEach(function (id) {
+            var isBad = base === "pick" ? !!gbv[f][id] : !!egbv[f][id], mw = [];
+            if (req[id]) mw.push(reqWhy(req[id]));
+            if (isBad && base === "pick") mw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。");
+            if (isBad && base === "epick") mw.push(charName(id) + "は、前のセットで予想したキャラ（相手のGLOBAL BAN）のため、PICKできない予想になります。");
+            if (cst0.violated[id]) mw = mw.concat(cst0.violated[id]);
+            var tg = makeTag(CH[id], { req: !!req[id], bad: isBad, gray: !!cst0.violated[id], why: mw, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
+            if (isSel(id, { kind: "blk", spec: spec })) tg.classList.add("sel");
+            attachTag(tg, CH[id], { kind: "blk", spec: spec });
+            d.appendChild(tg);
+          });
+        }
         ["s", "h"].forEach(function (f) {
           ["ban", "pick", "eban", "epick"].forEach(function (base) {
             var cap = capOf(s, f, base);
             if (cap === 0) return;
+            if ((base === "pick" || base === "epick") && slotMode()) {                  // スロットモード：行ごとに、1つの編成（組み合わせ禁止も、行ごとに見る）
+              for (var rr = 1; rr <= slotCount(f, base); rr++) {
+                var rowAll = blockPickedMap(s, f, cellName(base, rr, 1));
+                var cst0 = isSurvivorPick(f, base) && (s.cb || []).length ? comboState(s, rowAll, cap) : { blocked: {}, violated: {} };
+                for (var cc = 1; cc <= cap; cc++) fillCell(f, base, cellName(base, rr, cc), cst0);
+              }
+              if (base === "pick") for (var c3 = 1; c3 <= cap; c3++) {
+                var sl3 = $("psel-" + f + "-" + base + c3);                              // この列の選手名
+                if (sl3) { fillSel(sl3, f); sl3.value = String(obj(obj(st[f]).pl)[base + c3] || ""); }
+              }
+              var c4 = $("cnt-" + f + "-" + base);
+              if (c4) { c4.textContent = ""; c4.className = "cnt"; }
+              return;
+            }
             var isPickT = base === "pick" || base === "epick", names = isPickT ? slotNames(f, base) : [base], multi = names.length > 1;
             var want = blockFaction(f, base), shown = 0, autoN = 0;
             names.forEach(function (b) {
@@ -1987,6 +2059,7 @@
             var c = $("cnt-" + f + "-" + base);
             if (c) {
               if (multi) { c.textContent = ""; c.className = "cnt"; }                   // スロットがあるときは、「3 / 4」は出さない
+              else if (isPickT) { c.textContent = shown + "人"; c.className = "cnt"; }                  // スロットオフのPICK：人数の制限はない
               else { c.textContent = shown + " / " + cap + ((base === "ban" || base === "eban") && autoN ? "（＋ローカルBAN " + autoN + "）" : ""); c.className = "cnt" + (shown > cap ? " over" : ""); }
             }
           });
