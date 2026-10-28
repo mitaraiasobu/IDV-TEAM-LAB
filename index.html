@@ -64,7 +64,7 @@
   .tag .face { width: 56px; height: 56px; margin: 0 auto; border-radius: 6px; background-repeat: no-repeat; background-color: rgba(0,0,0,.35);
                display: flex; align-items: center; justify-content: center; font-size: 26px; }
   .tag .nm { font-size: 10.5px; line-height: 1.15; margin-top: 2px; word-break: break-all; min-height: 24px; display: flex; align-items: center; justify-content: center; }
-  .tag .rms { position: absolute; top: 2px; right: 3px; display: flex; flex-direction: row-reverse; flex-wrap: wrap; justify-content: flex-start; gap: 1px; max-width: 60px; z-index: 2; }
+  .tag .rms { position: absolute; top: 2px; right: 3px; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; z-index: 2; }       /* 縦に並べる */
   .tag .rms span { font-size: 10px; line-height: 1; padding: 1px; border-radius: 8px; background: rgba(0, 0, 0, .6); color: #fff; }
   .tag.fav.h { background: linear-gradient(180deg, #5a1d29, #a02a3d); border-color: #ff5e75; }                /* 誰かの得意キャラ：少しだけ明るく */
   .tag.fav.s { background: linear-gradient(180deg, #1c3f73, #2b62b0); border-color: #5ca2ff; }
@@ -77,6 +77,18 @@
   #whyPop b { display: block; margin-bottom: 2px; font-size: 13px; } #whyPop div + div { margin-top: 3px; }
   #gate .who { display: flex; align-items: baseline; gap: 10px; width: 100%; margin: 6px 0; padding: 11px 12px; text-align: left; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 15px; cursor: pointer; }
   #gate .who:hover { border-color: var(--ac); } #gate .who .tg { font-size: 11px; color: var(--sub); margin-left: auto; }
+  .tag.hl { box-shadow: 0 0 0 3px var(--gold), 0 0 16px 4px rgba(255, 210, 63, .85); transform: translateY(-2px); }              /* 空のスロットをクリックした選手の、得意キャラ */
+  .tag.insL { box-shadow: 0 -5px 0 var(--ac); } .tag.insR { box-shadow: 0 5px 0 var(--ac); }                                         /* 入れる場所の目印（縦の枠：上／下） */
+  .drop:not(.col) .tag.insL { box-shadow: -5px 0 0 var(--ac); } .drop:not(.col) .tag.insR { box-shadow: 5px 0 0 var(--ac); }
+  .slotctl { margin-left: 8px; font-weight: 400; font-size: 12px; color: var(--sub); display: inline-flex; align-items: center; gap: 4px; }
+  .slotctl .sn { color: var(--text); font-size: 13px; }
+  .sbtn { appearance: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 6px; width: 24px; height: 22px; line-height: 1; font-size: 14px; cursor: pointer; padding: 0; }
+  .sbtn:hover { border-color: var(--ac); }
+  .slots { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }                                                       /* スロットは、横に並ぶ列 */
+  .slotcol { flex: 0 0 auto; width: 98px; display: flex; flex-direction: column; gap: 4px; }
+  .slotcol .psel, .slotcol .pname { width: 100%; font: inherit; font-size: 12px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 4px; text-align: center; }
+  .slotcol .pname { color: var(--sub); background: none; border-style: dashed; }
+  .drop.col { flex-direction: column; flex-wrap: nowrap; align-items: center; min-height: 100px; }                                      /* キャラは、縦に並ぶ */
   .tag.sel { outline: 3px solid #fff; }
   .ghost .gcount { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); background: var(--ac); color: var(--ac-on); font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 10px; }
   .tag.req { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold), 0 0 12px 2px rgba(255,210,63,.75); }
@@ -120,8 +132,8 @@
   .blk h4 .cnt { margin-left: auto; font-weight: 400; color: var(--sub); font-size: 12px; }
   .blk h4 .cnt.over { color: #ff7a85; font-weight: 700; }
   .blk.gb .drop { background: rgba(160,120,255,.07); border-color: #6b57a8; }
-  #memo { margin-top: 12px; }
-  #memo textarea { width: 100%; min-height: 110px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: inherit; resize: vertical; }
+  .memo { margin-top: 12px; }
+  .memo textarea { width: 100%; min-height: 110px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: inherit; resize: vertical; }
   .hint { color: var(--sub); font-size: 12px; margin: 4px 0; }
   /* スマホを縦に持っているとき（画面を回して使うとき）は、縦の高さが少ないので、上の部分を小さくする */
   html.rot header { padding: 4px 12px 2px; gap: 8px; } html.rot header h1 { font-size: 15px; } html.rot header .sub { display: none; }
@@ -129,7 +141,7 @@
   html.rot #notice { margin: 2px 12px; font-size: 12px; } html.rot #notice .bar { padding: 3px 8px; margin-bottom: 2px; }
   html.rot main { padding: 4px 12px 8px; gap: 8px; } html.rot #pal { flex-basis: 290px; padding: 6px; } html.rot #pal .hint { display: none; }
   html.rot .corner { padding: 6px 8px 8px; } html.rot .corner .chd > h3 { margin-bottom: 2px; font-size: 14px; } html.rot .blk { margin-top: 4px; } html.rot .drop { min-height: 76px; }
-  html.rot #memo textarea { min-height: 70px; }
+  html.rot .memo textarea { min-height: 70px; }
   .empty-msg { color: var(--sub); padding: 30px; text-align: center; }
   .empty-msg a, #notice .bar a { color: var(--ac); word-break: break-all; }
   /* ルール設定 */
@@ -384,7 +396,7 @@
   // ───────── 組み合わせ禁止（サバイバーのPICK）・名札の「理由」 ─────────
   function charName(id) { return CH[id] ? CH[id].n : "キャラ" + id; }
   function hardOf(s) { var o = {}; ["h", "s"].forEach(function (f) { ((s.req && s.req[f]) || []).forEach(function (r) { if (!r.g) o[r.id] = true; }); }); return o; }
-  function isSurvivorPick(f, b) { return (f === "s" && b === "pick") || (f === "h" && b === "epick"); }          // サバイバーを選ぶ枠（自陣営のPICK／相手のPICK予想）
+  function isSurvivorPick(f, b) { b = baseB(b); return (f === "s" && b === "pick") || (f === "h" && b === "epick"); }          // サバイバーを選ぶ枠（自陣営のPICK／相手のPICK予想）
   function blockPickedMap(s, f, b) {                                                 // その枠に入っているキャラ（必須で自動に入るものも含む）
     var m = {}, want = blockFaction(f, b), hard = hardOf(s);
     Object.keys(obj(obj(obj(setState())[f])[b])).forEach(function (k) { var id = Number(k); if (CH[id]) m[id] = true; });
@@ -409,6 +421,12 @@
     });
     return { blocked: blocked, violated: violated };
   }
+  function favIdsOf(pid) {
+    var out = {}, pl = (PLAYERS || []).filter(function (x) { return String(x.id) === String(pid); })[0], m = obj(obj(STATE.fav)[pid]);
+    Object.keys(m).forEach(function (id) { if (m[id] && CH[id] && !(pl && pl.f && pl.f.indexOf(CH[id].f) < 0)) out[id] = true; });
+    return out;
+  }
+  var HILITE = null;                                                                 // 空のスロットをクリックした選手：その選手の得意キャラを、名札置き場で強調する
   function reqWhy(g) {
     return g === "req" ? "ローカル必須キャラです。このセットで必ず使います（PICKの枠に自動で入ります）。"
                        : "ローカル必須（組み合わせ" + g + "）のキャラです。同じ組のセットのうち、決まった回数、必ず使います。";
@@ -777,21 +795,32 @@
       if (ps.length || mg.length) askWho(ps, mg, done); else askNameFree(done);
     }).catch(function () { askNameFree(done); });
   }
-  function askWho(ps, mg, done) {
+  function chooseWho() {                                                              // 履歴・端末の画面から：名前を、一覧から選びなおす
+    var m = RAWMETA || {};
+    askWho(m.players || [], m.mgr || [], function () { $("gate").hidden = true; renderHist(); }, function () { $("gate").hidden = true; });
+  }
+  function whoDone() { try { return localStorage.getItem("lab_who_" + ID) === "1"; } catch (e) { return false; } }          // この端末で、「あなたは誰ですか？」に答えたか
+  function markWho() { WHO_CHECKED = true; try { localStorage.setItem("lab_who_" + ID, "1"); } catch (e) { /* 無視 */ } }
+  var WHO_CHECKED = false;
+  function askWho(ps, mg, done, cancel) {
+    var named = !!loadName();                                                       // すでに名前がある人（以前のログイン済み）にも、次のログインで1回、聞く
     gate(function (c) {
       brand(c, "あなたは誰ですか？");
       var w = el("div", "welcome"); w.appendChild(el("div", "", "あなたの名前を選んでください。履歴には「選んだ名前＋この端末のランダムな英数字6文字」が出ます。"));
+      if (named) w.appendChild(el("div", "", "いまの名前：" + NAME));
       c.appendChild(w);
       function add(label, name, cls) {
         var b = el("button", "who"); b.type = "button"; b.appendChild(el("span", cls || "", name)); b.appendChild(el("span", "tg", label));
-        b.addEventListener("click", function () { saveName(cleanName(name)); done(); });
+        b.addEventListener("click", function () { saveName(cleanName(name)); markWho(); done(); });
         c.appendChild(b);
       }
       ps.forEach(function (p) { add("選手", p.n, "pn " + (p.f || "")); });
       mg.forEach(function (x) { add("マネージャー", x.n, ""); });
-      var other = el("button", "btn nogo", "この中にいない（名前を自分で決める）"); other.type = "button";
-      other.addEventListener("click", function () { askNameFree(done); });
+      var other = el("button", "btn nogo", named ? "この中にいない（いまの名前のまま使う）" : "この中にいない（名前を自分で決める）"); other.type = "button";
+      other.addEventListener("click", function () { markWho(); if (named) done(); else askNameFree(done); });
       c.appendChild(other);
+      if (named) { var ch = el("button", "btn nogo", "名前を自分で決めなおす"); ch.type = "button"; ch.addEventListener("click", function () { markWho(); askNameFree(done); }); c.appendChild(ch); }
+      if (cancel) { var cn = el("button", "btn nogo", "やめる"); cn.type = "button"; cn.addEventListener("click", cancel); c.appendChild(cn); }
     });
   }
   function askNameFree(done) {                                                  // パスワードのあとに、自分の名前を決める（名前＋この端末の6文字が、履歴に出る）
@@ -820,6 +849,17 @@
   }
   function unlock() {
     if (!loadName()) { askName(unlock); return; }
+    if (!WHO_CHECKED && !whoDone()) {                                              // 名前は保存してあるが、「あなたは誰ですか？」に、まだ答えていない人：大会BOTのチームなら、聞く
+      WHO_CHECKED = true;
+      getRaw("meta").then(function (r) {
+        var m = r && r.ok ? r.data : null, ok = m && m.mode !== "free", ps = ok ? (m.players || []) : [], mg = ok ? (m.mgr || []) : [];
+        if (ps.length || mg.length) askWho(ps, mg, unlock); else enter();
+      }).catch(enter);
+      return;
+    }
+    enter();
+  }
+  function enter() {
     $("gate").hidden = true; $("stage").hidden = false;
     fit();
     stream("meta", onMeta);
@@ -936,7 +976,7 @@
     if (FAVS[ch.id] && !opt.nofav) why.push("★ " + FAVS[ch.id].join("・") + "さんの得意キャラです。");
     if (opt.gray) t.classList.add("gray");
     t._why = why;                                                                     // 長押しで、理由を見せる
-    var marks = ch.f === "s" ? roleMarks(ch.id) : [];
+    var marks = ch.f === "s" && showMarks ? roleMarks(ch.id) : [];
     if (marks.length) {                                                               // 名札の右上
       var rm = el("div", "rms"); rm.title = marks.map(function (m) { return m.n; }).join("・");
       marks.forEach(function (m) { rm.appendChild(el("span", "", m.e)); });
@@ -968,7 +1008,11 @@
       var sid = (p[1] || "").split("_"), r = (META && META.rounds || []).filter(function (x) { return String(x.no) === sid[0]; })[0];
       var s = r ? (r.sets || []).filter(function (x) { return x.k === sid[1]; })[0] : null, where = (r ? r.name : "") + (s ? " " + s.label : "");
       if (p[2] === "memo") return where + "：メモを書き換えた";
-      return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[p[3]] || "PICK") + (add ? " に " : " から ") + ch(p[4]) + (add ? " を入れた" : " を外した");
+      if (p[3] === "memo") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + "のメモを書き換えた";
+      if (p[3] === "slots") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[p[4]] || "PICK") + "のスロットの数を変えた";
+      if (p[3] === "pl") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " PICKのスロットの選手名を変えた";
+      var bn = baseB(p[3] || ""), sn = (p[3] || "").replace(/^\D+/, "");
+      return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[bn] || "PICK") + (sn ? "（スロット" + sn + "）" : "") + (add ? " に " : " から ") + ch(p[4]) + (add ? " を入れた" : " を外した");
     }
     return path;
   }
@@ -992,6 +1036,9 @@
     var sv = el("button", "btn", "保存"); sv.type = "button";
     sv.addEventListener("click", function () { if (!cleanName(inp.value)) { sv.textContent = "名前を入れてください"; return; } saveName(inp.value); sv.textContent = "保存しました（これから、「" + who() + "」と出ます）"; });
     row.appendChild(sv);
+    if (!FREE && RAWMETA && ((RAWMETA.players || []).length || (RAWMETA.mgr || []).length)) {         // 大会BOTのチーム：一覧から選べる
+      var pk = el("button", "btn", "一覧から選ぶ"); pk.type = "button"; pk.addEventListener("click", chooseWho); row.appendChild(pk);
+    }
     row.appendChild(el("span", "", "　履歴に出る名前：" + who() + "　／　この端末のID：" + CID.slice(0, 6)));
     var close = el("button", "btn", "閉じる"); close.type = "button"; close.style.marginLeft = "auto"; close.addEventListener("click", function () { $("hist").hidden = true; });
     row.appendChild(close);
@@ -1131,7 +1178,7 @@
     cur.tab = tab;
     if (set) cur.set = set; else if (isRoundTab()) { var r = curRound(); cur.set = r && r.sets[0] ? r.sets[0].k : "1"; }
     try { sessionStorage.setItem("lab_tab_" + ID, JSON.stringify(cur)); } catch (e) { /* 無視 */ }
-    SELS = [];
+    SELS = []; HILITE = null;
     buildAll();
   }
 
@@ -1144,21 +1191,14 @@
   function attachTag(node, ch, from) {
     node.addEventListener("pointerdown", function (e) {
       if (e.button != null && e.button > 0) return;
-      var st = { ch: ch, from: from, x: e.clientX, y: e.clientY, cx: e.clientX, cy: e.clientY, started: false, node: node, pid: e.pointerId, touch: e.pointerType === "touch", timer: null, ghost: null, shift: !!e.shiftKey, group: null, whyTimer: null, explained: false };
+      var st = { ch: ch, from: from, x: e.clientX, y: e.clientY, cx: e.clientX, cy: e.clientY, started: false, node: node, pid: e.pointerId, touch: e.pointerType === "touch", timer: null, ghost: null, shift: !!e.shiftKey, group: null };
       drag = st;
       hideWhy();
-      if (node._why && node._why.length) st.whyTimer = setTimeout(function () {                    // 動かさずに長押し：なぜその表示なのか、説明する
-        if (drag !== st || Math.abs(st.cx - st.x) + Math.abs(st.cy - st.y) > 8) return;
-        st.explained = true;
-        if (st.started) { if (st.ghost) st.ghost.remove(); document.body.classList.remove("dragging"); drag = null; }       // 持ち上げかけていたら、やめる
-        showWhy(node);
-      }, 600);
       if (st.touch) st.timer = setTimeout(function () { if (drag === st) begin(st, st.x, st.y); }, 280);
     });
   }
   function begin(st, x, y) {
     st.started = true;
-    if (!st.touch) clearTimeout(st.whyTimer);                                          // マウス：動かしはじめたら、長押しの説明は出さない
     var me = { id: st.ch.id, ch: st.ch, from: st.from };
     st.group = isSel(me.id, me.from) ? SELS.slice() : (st.shift && SELS.length ? SELS.concat([me]) : [me]);          // 選んでいる名札を、まとめて動かす
     var g = st.node.cloneNode(true);
@@ -1185,12 +1225,23 @@
     setTimeout(hideWhy, 8000);
   }
   document.addEventListener("pointerdown", function (e) { if (!(e.target.closest && e.target.closest(".tag"))) hideWhy(); }, true);
+  function anchorAt(zone, x, y) {                                                    // ドロップした場所にある名札（その前／後ろに入れる）。縦に並ぶ枠は上下で、横に並ぶ枠は左右で決める
+    if (!zone || !zone.getAttribute || !zone.getAttribute("data-drop")) return null;
+    var e = document.elementFromPoint(x, y), tg = e && e.closest ? e.closest(".tag") : null;
+    if (!tg || !zone.contains(tg) || tg.classList.contains("locked")) return null;
+    var r = tg.getBoundingClientRect(), vert = zone.classList.contains("col");
+    return { id: Number(tg.getAttribute("data-id")), after: vert ? y > r.top + r.height / 2 : x > r.left + r.width / 2 };
+  }
   function moveGhost(st, x, y) { st.ghost.style.left = x + "px"; st.ghost.style.top = y + "px"; }
   function highlight(x, y) {
     var all = document.querySelectorAll(".over");
     for (var i = 0; i < all.length; i++) all[i].classList.remove("over");
     var t = dropTargetAt(x, y);
     if (t && t.id !== "pal") t.classList.add("over");
+    var ins = document.querySelectorAll(".insL, .insR");                                                // 入れる場所の目印
+    for (var j = 0; j < ins.length; j++) ins[j].classList.remove("insL", "insR");
+    var an = t && t.id !== "pal" ? anchorAt(t, x, y) : null;
+    if (an) { var tg = t.querySelector('.tag[data-id="' + an.id + '"]'); if (tg) tg.classList.add(an.after ? "insR" : "insL"); }
     $("pal").classList.toggle("drop-ok", !!(drag && drag.from && drag.from.kind !== "pal" && t && t.id === "pal"));
   }
   document.addEventListener("pointermove", function (e) {
@@ -1210,10 +1261,9 @@
     var st = drag;
     if (!st) return;
     drag = null;
-    clearTimeout(st.timer); clearTimeout(st.whyTimer);
-    if (st.explained) { document.body.classList.remove("dragging"); return; }                  // 長押しで説明を出したあとは、クリックにしない
-    var all = document.querySelectorAll(".over");
-    for (var i = 0; i < all.length; i++) all[i].classList.remove("over");
+    clearTimeout(st.timer);
+    var all = document.querySelectorAll(".over, .insL, .insR");
+    for (var i = 0; i < all.length; i++) all[i].classList.remove("over", "insL", "insR");
     $("pal").classList.remove("drop-ok");
     document.body.classList.remove("dragging");
     if (!st.started) {                                       // 動かさずに離した：クリック（持ち上げる／置く）
@@ -1223,7 +1273,7 @@
     if (st.ghost) st.ghost.remove();
     if (cancelled) return;
     var t = dropTargetAt(e.clientX, e.clientY);
-    if (t) dropMany(st.group || [{ id: st.ch.id, ch: st.ch, from: st.from }], t, !!(e.ctrlKey || e.metaKey));           // Ctrlを押しながら：複製
+    if (t) dropMany(st.group || [{ id: st.ch.id, ch: st.ch, from: st.from }], t, !!(e.ctrlKey || e.metaKey), anchorAt(t, e.clientX, e.clientY));           // Ctrlを押しながら：複製
   }
   document.addEventListener("pointerup", function (e) { finish(e, false); });
   document.addEventListener("pointercancel", function (e) { finish(e, true); });
@@ -1235,8 +1285,9 @@
       fill();
       return;
     }
-    if (SELS.length && !mine && zone) { dropMany(SELS.slice(), zone, !!(e && (e.ctrlKey || e.metaKey))); return; }      // 持ち上げている名札を、この枠に置く（Ctrlなら複製）
+    if (SELS.length && !mine && zone) { dropMany(SELS.slice(), zone, !!(e && (e.ctrlKey || e.metaKey)), st.node.classList.contains("locked") ? null : { id: st.ch.id, after: false }); return; }      // 持ち上げている名札を、この枠に置く（Ctrlなら複製。クリックした名札の前に入れる）
     SELS = mine && SELS.length === 1 ? [] : [me];
+    if (SELS.length && st.node._why && st.node._why.length) showWhy(st.node);          // 特殊な表示（灰色・★・必須・使用済みなど）の名札は、クリックで、理由を説明する
     fill();
   }
   $("pal").addEventListener("click", function (e) {                                  // 持ち上げている名札を、名札置き場へ（枠から外す）
@@ -1244,14 +1295,19 @@
     if (off.length && !(e.target.closest && e.target.closest(".tag"))) dropMany(off, $("pal"), false);
   });
   document.addEventListener("click", function (e) { MODS = { ctrl: !!(e.ctrlKey || e.metaKey), shift: !!e.shiftKey }; }, true);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && SELS.length) { SELS = []; fill(); } });          // Esc：選びなおし
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && (SELS.length || HILITE != null)) { SELS = []; HILITE = null; fill(); } });          // Esc：選びなおし
   function sameFrom(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
 
   // 置き先（data-drop）：fav:選手ID ／ set:v:b（v＝見る側 h|s、b＝ban|pick）
   function opp(v) { return v === "h" ? "s" : "h"; }
   var BLK = { ban: "BAN", pick: "PICK", eban: "相手のBAN予想", epick: "相手のPICK予想" };
   // 枠の種類 b：ban＝自陣営のBAN（相手陣営のキャラ）／pick＝自陣営のPICK（自陣営のキャラ）／eban＝相手のBAN予想（自陣営のキャラ）／epick＝相手のPICK予想（相手陣営のキャラ）
-  function blockFaction(v, b) { return b === "ban" || b === "epick" ? opp(v) : v; }
+  function baseB(b) { return String(b).replace(/\d+$/, ""); }                       // pick2 → pick（スロット2の名前から、基本の名前へ）
+  function blockFaction(v, b) { b = baseB(b); return b === "ban" || b === "epick" ? opp(v) : v; }
+  function slotCount(v, base) { var n = Number(obj(obj(obj(setState())[v]).slots)[base]); return n >= 2 ? Math.min(Math.floor(n), 6) : 1; }          // PICKのスロットの数
+  function slotNames(v, base) { var n = slotCount(v, base), out = [base]; for (var i = 2; i <= n; i++) out.push(base + i); return out; }
+  var SLOTSIG = "";
+  function slotSig() { return JSON.stringify([setId(), slotCount("s", "pick"), slotCount("s", "epick"), slotCount("h", "pick"), slotCount("h", "epick")]); }
   function dropPath(spec) {
     var p = spec.split(":");
     if (p[0] === "fav") return "fav/" + p[1];
@@ -1265,17 +1321,17 @@
     var base = dropPath(from.spec);
     return base ? base + "/" + id : null;
   }
-  function dropMany(items, target, copy) {                                           // items：[{ id, ch, from }]。copy：複製（元の枠に残す）
+  function dropMany(items, target, copy, anchor) {                                    // items：[{ id, ch, from }]。copy：複製（元の枠に残す）。anchor：{id, after}＝この名札の前／後ろに入れる
     var ops = {}, any = false;
     if (target.id === "pal") {                                                       // 名札置き場へ戻す：外す
       items.forEach(function (it) { var old = pathOfFrom(it.from, it.ch.id); if (old) { ops[old] = null; any = true; } });
-      SELS = [];
+      SELS = []; HILITE = null;
       if (any) write(ops); else fill();
       return;
     }
     var spec = target.getAttribute("data-drop");
     if (target.classList.contains("off") || !spec) return;
-    var parts = spec.split(":"), bad = null, i = 0;
+    var parts = spec.split(":"), bad = null;
     if (parts[0] === "gbx") {                                                        // GLOBAL BAN（手動で、足す）
       items.forEach(function (it) {
         if (it.ch.f !== parts[1]) { bad = bad || it; return; }
@@ -1284,30 +1340,43 @@
         if (old && !copy) ops[old] = null;
       });
       if (bad) flash("この枠には" + (parts[1] === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。");
-      SELS = [];
+      SELS = []; HILITE = null;
       if (Object.keys(ops).length) write(ops); else fill();
       return;
     }
     var path = dropPath(spec);
     if (!path) return;
-    var s0 = parts[0] === "set" ? curSet() : null, pk = null, comboWhy = null;
-    if (s0 && isSurvivorPick(parts[1], parts[2]) && (s0.cb || []).length) pk = blockPickedMap(s0, parts[1], parts[2]);        // 組み合わせ禁止のチェック用
+    var isSet = parts[0] === "set", bb = isSet ? baseB(parts[2]) : "", s0 = isSet ? curSet() : null, capVal = isSet ? capOf(s0, parts[1], parts[2]) : 0;
+    var slotFixed = isSet && (bb === "pick" || bb === "epick") && slotCount(parts[1], bb) > 1;                  // スロットがあるときは、PICKの人数ぴったりに固定
+    var combo = isSet && s0 && isSurvivorPick(parts[1], bb) && (s0.cb || []).length;
+    var pk = isSet && s0 && (slotFixed || combo) ? blockPickedMap(s0, parts[1], parts[2]) : null;
+    var gbIds = {}; if (isSet && bb === "pick" && s0) globalList(parts[1], curRound(), s0).forEach(function (id) { gbIds[id] = true; });          // 前のセットで使ったキャラ
+    var comboWhy = null, capWhy = null, gbWhy = null;
+    var cur = obj(getAt(path)), order = Object.keys(cur).map(Number).filter(function (id) { return cur[id]; }).sort(byPlaced(cur)), add = [];
     items.forEach(function (it) {
-      if (parts[0] === "set" && it.ch.f !== blockFaction(parts[1], parts[2])) { bad = bad || it; return; }
-      if (pk && !pk[it.ch.id]) {
-        var cst = comboState(s0, pk, capOf(s0, parts[1], parts[2]));
-        if (cst.blocked[it.ch.id]) { comboWhy = comboWhy || cst.blocked[it.ch.id][0]; return; }
-        pk[it.ch.id] = true;
+      var id = it.ch.id, old = pathOfFrom(it.from, id), dest = path + "/" + id;
+      if (isSet && it.ch.f !== blockFaction(parts[1], parts[2])) { bad = bad || it; return; }
+      if (dest === old) { if (!copy && anchor && anchor.id !== id) add.push(id); return; }                 // 同じ枠の中：Ctrlなしで、場所を指定したときだけ、並べ替え
+      if (cur[id]) { if (old && !copy) ops[old] = null; return; }                                        // すでに入っている（同じ枠に同じ名札は入らない）
+      if (gbIds[id]) { gbWhy = gbWhy || charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。"; return; }
+      if (pk && !pk[id]) {
+        if (slotFixed && Object.keys(pk).length >= capVal) { capWhy = capWhy || "スロットがあるときは、PICKは" + capVal + "人までです（このスロットは、いっぱいです）。"; return; }
+        if (combo) { var cst = comboState(s0, pk, capVal); if (cst.blocked[id]) { comboWhy = comboWhy || cst.blocked[id][0]; return; } }
+        pk[id] = true;
       }
-      var old = pathOfFrom(it.from, it.ch.id), dest = path + "/" + it.ch.id;
-      if (dest === old) return;                                                      // 同じ枠の中：何もしない（複製もしない）
-      if (obj(getAt(path))[it.ch.id]) { if (old && !copy) ops[old] = null; return; }   // すでに入っている（同じ枠に同じ名札は入らない）
-      ops[dest] = seq(i++);                                                          // 置いた順
+      add.push(id);
       if (old && !copy) ops[old] = null;
     });
-    if (bad) flash((parts[1] === "s" ? "サバイバー" : "ハンター") + "目線の" + BLK[parts[2]] + "には" + (blockFaction(parts[1], parts[2]) === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。");
-    else if (comboWhy) flash(comboWhy);
-    SELS = [];
+    if (add.length) {
+      var rest = order.filter(function (id) { return add.indexOf(id) < 0; }), reorder = !!anchor || add.some(function (id) { return cur[id]; });
+      var at = anchor ? rest.indexOf(anchor.id) : -1;
+      if (at >= 0) { var k = anchor.after ? at + 1 : at; rest = rest.slice(0, k).concat(add, rest.slice(k)); } else rest = rest.concat(add);
+      var base = Date.now(), n = 0;
+      rest.forEach(function (id) { if (reorder || add.indexOf(id) >= 0) ops[path + "/" + id] = base + (n++) / 1000; });          // 置いた順（並べ替えのときは、その枠の全員を、新しい順に）
+    }
+    if (bad) flash((parts[1] === "s" ? "サバイバー" : "ハンター") + "目線の" + BLK[bb || parts[2]] + "には" + (blockFaction(parts[1], parts[2]) === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。");
+    else if (gbWhy) flash(gbWhy); else if (comboWhy) flash(comboWhy); else if (capWhy) flash(capWhy);
+    SELS = []; HILITE = null;
     if (Object.keys(ops).length) write(ops); else fill();
   }
   function getAt(path) {
@@ -1319,7 +1388,17 @@
   function flash(msg) { var n = $("notice"); n.setAttribute("data-flash", msg); showNotice(); clearTimeout(flashTimer); flashTimer = setTimeout(function () { n.removeAttribute("data-flash"); showNotice(); }, 3500); }
 
   function onDropClick(spec, node) {                         // 持ち上げている名札を、クリックで置く（Ctrlを押していれば、複製）
-    if (!SELS.length) return;
+    if (!SELS.length) {                                                              // 何も持ち上げていないとき：選手名が入っているスロットで、まだ空きがあれば、その選手の得意キャラを、名札置き場で強調する
+      var pr = spec.split(":");
+      if (pr[0] === "set" && baseB(pr[2]) === "pick") {
+        var sl = $("psel-" + pr[1] + "-" + pr[2]), pid = sl && sl.value ? sl.value : null, cs0 = curSet();
+        if (pid && cs0 && node.querySelectorAll(".tag").length < capOf(cs0, pr[1], pr[2])) {
+          HILITE = pid; fillPalette();
+          flash((((PLAYERS || []).filter(function (x) { return String(x.id) === String(pid); })[0]) || { n: "選手" }).n + "さんの得意キャラを、名札置き場で強調しています（Escで解除）。");
+        }
+      }
+      return;
+    }
     dropMany(SELS.slice(), node, MODS.ctrl);
   }
 
@@ -1332,6 +1411,8 @@
     fill();
   }
   var palFilter = "";
+  var showMarks = true;                                      // 名札の職業マークを出すか（この端末の表示の設定）
+  try { showMarks = localStorage.getItem("lab_rolemark") !== "0"; } catch (e) { /* 無視 */ }
   var palHide = { h: false, s: false };                      // 名札置き場の、折り畳み（この端末の表示の設定）
   try { var ph = localStorage.getItem("lab_pal_hide") || ""; palHide.h = ph.indexOf("h") >= 0; palHide.s = ph.indexOf("s") >= 0; } catch (e) { /* 無視 */ }
   function savePalHide() { try { localStorage.setItem("lab_pal_hide", (palHide.h ? "h" : "") + (palHide.s ? "s" : "")); } catch (e) { /* 無視 */ } }
@@ -1355,16 +1436,21 @@
     var bh = el("div", "palbox h"), gh = el("div", "grid"); gh.id = "palH"; bh.appendChild(gh);
     pal.appendChild(foldBtn("h", "ハンター", bh)); pal.appendChild(bh);
     var bs = el("div", "palbox s"), gs = el("div"); gs.id = "palS"; bs.appendChild(gs);
-    var hs = el("div"); hs.style.cssText = "display:flex;align-items:center;gap:10px;flex:none";
+    var hs = el("div"); hs.style.cssText = "display:flex;align-items:center;flex-wrap:wrap;gap:2px 10px;flex:none";
     var lab = el("label", "palopt"), cb = el("input"); cb.type = "checkbox"; cb.id = "roleSort"; cb.checked = roleSort;
-    hs.appendChild(foldBtn("s", "サバイバー", bs, function (hid) { lab.style.display = hid ? "none" : ""; }));
+    var lab2 = el("label", "palopt"), cb2 = el("input"); cb2.type = "checkbox"; cb2.id = "roleMark"; cb2.checked = showMarks;
+    hs.appendChild(foldBtn("s", "サバイバー", bs, function (hid) { lab.style.display = hid ? "none" : ""; lab2.style.display = hid ? "none" : ""; }));
     cb.addEventListener("change", function () { roleSort = cb.checked; try { localStorage.setItem("prep_role_sort", roleSort ? "1" : "0"); } catch (e) { /* 無視 */ } fillPalette(); });
     lab.appendChild(cb); lab.appendChild(document.createTextNode("職業ごとの並び替え"));
-    hs.appendChild(lab); pal.appendChild(hs);
+    hs.appendChild(lab);
+    cb2.addEventListener("change", function () { showMarks = cb2.checked; try { localStorage.setItem("lab_rolemark", showMarks ? "1" : "0"); } catch (e) { /* 無視 */ } fill(); });
+    lab2.appendChild(cb2); lab2.appendChild(document.createTextNode("職業マーク"));
+    hs.appendChild(lab2); pal.appendChild(hs);
     pal.appendChild(bs);
     fillPalette();
   }
   function capOf(s, v, b) {                                                          // 枠の人数。s.ban.h＝ハンターのキャラを何人BANするか、s.ban.s＝サバイバーのキャラを何人BANするか
+    b = baseB(b);
     if (b === "ban") return (s.ban || {})[opp(v)] || 0;                              // 自陣営のBAN：相手陣営のキャラを何人
     if (b === "pick") return (s.pick || {})[v] || 0;
     if (b === "eban") return (s.ban || {})[v] || 0;                                  // 相手のBAN予想：自陣営のキャラを何人
@@ -1398,6 +1484,18 @@
     }
     return out;
   }
+  function epickedIds(rno, k, v) {                                                   // そのセットの、v目線の「相手のPICK予想」（スロット1）
+    var m = obj(obj(obj(obj(STATE.sets)[rno + "_" + k])[v]).epick);
+    return Object.keys(m).map(Number).filter(function (id) { return m[id] && CH[id] && CH[id].f === opp(v); });
+  }
+  function globalEnemy(v, r, s) {                                                    // 相手のGLOBAL BAN（予想）：前のセットの、相手のPICK予想のキャラ
+    var f = opp(v), out = [], als = {}, lbs = lbSet(s);
+    if (!(s.gbOn || {})[f]) return out;
+    ((s.al || {})[f] || []).forEach(function (id) { als[id] = true; });
+    var i = (r.sets || []).indexOf(s);
+    for (var j = 0; j < i; j++) epickedIds(r.no, r.sets[j].k, v).forEach(function (id) { if (out.indexOf(id) < 0 && !lbs[id] && !als[id]) out.push(id); });
+    return out;
+  }
   function reqIds() {
     var s = curSet(), out = {};
     if (s) ["h", "s"].forEach(function (f) { (s.req && s.req[f] || []).forEach(function (r) { out[r.id] = r.g || "req"; }); });
@@ -1415,25 +1513,37 @@
   }
   function fillPalette() {
     FAVS = favSet();
-    var q = palFilter.trim().toLowerCase(), req = isRoundTab() ? reqIds() : {}, gray = {};
-    if (isRoundTab()) {                                                               // 自陣営のサバイバーPICKで、組み合わせ禁止にかかるキャラは、灰色
-      var s0 = curSet();
-      if (s0 && (s0.cb || []).length) gray = comboState(s0, blockPickedMap(s0, "s", "pick"), capOf(s0, "s", "pick")).blocked;
+    var q = palFilter.trim().toLowerCase(), req = isRoundTab() ? reqIds() : {}, gray = {}, hl = HILITE != null ? favIdsOf(HILITE) : {};
+    if (isRoundTab()) {
+      var s0 = curSet(), rd0 = curRound();
+      if (s0 && (s0.cb || []).length) {                                               // 組み合わせ禁止：自陣営のサバイバーPICKの、どのスロットでも選べないキャラは、灰色
+        var cbl = {};
+        slotNames("s", "pick").forEach(function (nm, i) {
+          var bl = comboState(s0, blockPickedMap(s0, "s", nm), capOf(s0, "s", "pick")).blocked;
+          if (i === 0) cbl = bl; else Object.keys(cbl).forEach(function (k) { if (!bl[k]) delete cbl[k]; });
+        });
+        Object.keys(cbl).forEach(function (k) { gray[k] = (gray[k] || []).concat(cbl[k]); });
+      }
+      if (s0 && rd0) ["s", "h"].forEach(function (f) {                                // GLOBAL BAN（前のセットで使ったキャラ）も、灰色
+        globalList(f, rd0, s0).forEach(function (id) { (gray[id] = gray[id] || []).push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。"); });
+      });
     }
     function addTag(box, c) {
       var ch = CH[c.id];
       var why = []; if (req[c.id]) why.push(reqWhy(req[c.id]));
       if (gray[c.id]) why = why.concat(gray[c.id]);
       var t = makeTag(ch, { req: !!req[c.id], gray: !!gray[c.id], why: why });
+      if (hl[c.id]) t.classList.add("hl");
       if (isSel(c.id, { kind: "pal" })) t.classList.add("sel");
       attachTag(t, ch, { kind: "pal" });
       box.appendChild(t);
     }
     function match(c) { return !q || (c.n + (c.e || "")).toLowerCase().indexOf(q) >= 0; }
     var hb = $("palH"); hb.textContent = ""; hb.className = "grid";
-    ((META.chars || {}).h || []).forEach(function (c) { if (match(c)) addTag(hb, c); });
+    function hlFirst(list) { return HILITE == null || roleSort ? list : list.filter(function (c) { return hl[c.id]; }).concat(list.filter(function (c) { return !hl[c.id]; })); }          // 強調するキャラは、先頭へ
+    hlFirst((META.chars || {}).h || []).forEach(function (c) { if (match(c)) addTag(hb, c); });
     var sb = $("palS"); sb.textContent = "";
-    var all = (META.chars || {}).s || [];
+    var all = hlFirst((META.chars || {}).s || []);
     if (roleSort && (META.roles || []).length) {                               // 職業ごと：同じキャラが、いくつかの職業に出てもよい（並びは、いつもの並びのまま）
       sb.className = "";
       var byId = {}; all.forEach(function (c) { byId[c.id] = c; });
@@ -1655,6 +1765,15 @@
     w.appendChild(el("div", "hint", r.name + "（" + r.fmt + "）／" + s.label + "　サバイバー目線：ハンターBAN" + s.ban.h
       + "　／　ハンター目線：サバイバーBAN" + s.ban.s + "。GLOBAL BANは前のセットで使ったキャラが自動で入ります。"));
     var cs = el("div"); cs.id = "corners";
+    function fname(f) { return f === "h" ? "ハンター" : "サバイバー"; }
+    function blockTitle(v, b) {
+      if (b === "gb") return editableGb() ? "GLOBAL BAN（自動。手で直せます）" : "GLOBAL BAN（自動）";
+      if (b === "egb") return "GLOBAL BAN（予想。自動）";
+      if (b === "pick") return fname(v) + "PICK";
+      if (b === "epick") return "相手の" + fname(opp(v)) + "PICK予想";
+      return BLK[b];
+    }
+    function clickDrop(spec, node) { node.addEventListener("click", function () { onDropClick(spec, node); }); }
     [["s", "サバイバー目線"], ["h", "ハンター目線"]].forEach(function (pair) {         // 上：サバイバー目線／下：ハンター目線
       var v = pair[0], c = el("div", "corner " + v), hd = el("div", "chd");
       hd.appendChild(el("h3", "", pair[1]));
@@ -1665,40 +1784,73 @@
         hd.appendChild(sw);
       }
       c.appendChild(hd);
-      [["own", "自陣営", v, ["ban", "pick", "gb"]], ["enemy", "敵陣営", opp(v), ["eban", "epick"]]].forEach(function (sd) {      // 左：自陣営の情報／右：敵陣営の情報（予想）
+      [["own", "自陣営", v, ["ban", "pick", "gb"]], ["enemy", "敵陣営", opp(v), ["eban", "epick", "egb"]]].forEach(function (sd) {      // 左：自陣営の情報／右：敵陣営の情報（予想）
         var side = el("div", "side " + sd[0]);
-        side.appendChild(el("h5", "", sd[1] + "（" + (sd[2] === "h" ? "ハンター" : "サバイバー") + "）"));
+        side.appendChild(el("h5", "", sd[1] + "（" + fname(sd[2]) + "）"));
         sd[3].forEach(function (b) {
-          var blk = el("div", "blk " + b), h = el("h4", "", b === "gb" ? (editableGb() ? "GLOBAL BAN（自動。手で直せます）" : "GLOBAL BAN（自動）") : BLK[b]);
-          h.appendChild(el("small", "", "（" + ((b === "gb" ? v : blockFaction(v, b)) === "h" ? "ハンター" : "サバイバー") + "のキャラ）"));
-          var cnt = el("span", "cnt"); cnt.id = "cnt-" + v + "-" + b; h.appendChild(cnt); blk.appendChild(h);
-          var d = el("div", "drop");
-          d.id = "blk-" + v + "-" + b;
-          if (b === "gb") {
-            d.setAttribute("data-hint", (s.gbOn || {})[v] ? "前のセットで使ったキャラがここに入ります" : "このセットはGLOBAL BANなし");
-            if (editableGb()) { d.setAttribute("data-drop", "gbx:" + v); d.addEventListener("click", (function (spec, node) { return function () { onDropClick(spec, node); }; })("gbx:" + v, d)); }
-          } else {
-            var cap = capOf(s, v, b);
-            if (cap === 0) { d.classList.add("off"); d.textContent = BLK[b] + "はできないセットです"; }
-            else { d.setAttribute("data-drop", "set:" + v + ":" + b); d.setAttribute("data-hint", "ここに名札を入れる"); d.addEventListener("click", (function (spec, node) { return function () { onDropClick(spec, node); }; })("set:" + v + ":" + b, d)); }
+          var blk = el("div", "blk " + b), h = el("h4", "", blockTitle(v, b));
+          var isPick = b === "pick" || b === "epick", cap = (b === "gb" || b === "egb") ? 1 : capOf(s, v, b);
+          if (!isPick) h.appendChild(el("small", "", "（" + fname(b === "gb" ? v : b === "egb" ? opp(v) : blockFaction(v, b)) + "のキャラ）"));
+          var n = isPick ? slotCount(v, b) : 1;
+          if (isPick && cap > 0) {                                                       // スロット：PICKの編成を、いくつも作って試せる（＋で増やす・－で減らす）
+            var sc = el("span", "slotctl");
+            sc.appendChild(document.createTextNode("スロット"));
+            sc.appendChild(el("b", "sn", String(n)));
+            var plus = el("button", "sbtn", "＋"); plus.type = "button"; plus.title = "スロットを増やす（PICKの編成を、もう1つ作る）";
+            plus.addEventListener("click", function () { var o = {}; o["sets/" + setId() + "/" + v + "/slots/" + b] = Math.min(6, slotCount(v, b) + 1); write(o); });
+            sc.appendChild(plus);
+            if (n > 1) {
+              var minus = el("button", "sbtn", "－"); minus.type = "button"; minus.title = "スロットを減らす（いちばん右（下）のスロットを消す）";
+              minus.addEventListener("click", function () { var k = slotCount(v, b), o = {}; if (k <= 1) return; o["sets/" + setId() + "/" + v + "/slots/" + b] = k - 1; o["sets/" + setId() + "/" + v + "/" + b + k] = null; o["sets/" + setId() + "/" + v + "/pl/" + b + k] = null; write(o); });
+              sc.appendChild(minus);
+            }
+            h.appendChild(sc);
           }
-          blk.appendChild(d); side.appendChild(blk);
+          var cnt = el("span", "cnt"); cnt.id = "cnt-" + v + "-" + b; h.appendChild(cnt); blk.appendChild(h);
+          if (isPick && cap > 0) {
+            var cols = el("div", "slots");                                               // スロットは、横に並ぶ列（上：選手名／下：キャラ。縦に並ぶ）
+            slotNames(v, b).forEach(function (nm) {
+              var col = el("div", "slotcol");
+              if (b === "pick") {                                                        // 自陣営：このスロットの選手を選ぶ（誰がどのキャラを使うか）
+                var sl = el("select", "psel"); sl.id = "psel-" + v + "-" + nm;
+                sl.addEventListener("change", function () { var o = {}; o["sets/" + setId() + "/" + v + "/pl/" + nm] = sl.value ? Number(sl.value) : null; writeQuiet(o); HILITE = null; fillPalette(); });
+                col.appendChild(sl);
+              } else col.appendChild(el("div", "pname", "相手" + (nm === b ? "" : "-" + nm.slice(b.length))));
+              var d = el("div", "drop col"); d.id = "blk-" + v + "-" + nm;
+              d.setAttribute("data-drop", "set:" + v + ":" + nm); d.setAttribute("data-hint", "ここに名札を入れる");
+              clickDrop("set:" + v + ":" + nm, d);
+              col.appendChild(d); cols.appendChild(col);
+            });
+            blk.appendChild(cols);
+          } else {
+            var d2 = el("div", "drop"); d2.id = "blk-" + v + "-" + b;
+            if (b === "gb") {
+              d2.setAttribute("data-hint", (s.gbOn || {})[v] ? "前のセットで使ったキャラがここに入ります" : "このセットはGLOBAL BANなし");
+              if (editableGb()) { d2.setAttribute("data-drop", "gbx:" + v); clickDrop("gbx:" + v, d2); }
+            } else if (b === "egb") {
+              d2.setAttribute("data-hint", (s.gbOn || {})[opp(v)] ? "前のセットで予想したPICKが、ここに入ります" : "このセットはGLOBAL BANなし");
+            } else if (cap === 0) { d2.classList.add("off"); d2.textContent = BLK[b] + "はできないセットです"; }
+            else { d2.setAttribute("data-drop", "set:" + v + ":" + b); d2.setAttribute("data-hint", "ここに名札を入れる"); clickDrop("set:" + v + ":" + b, d2); }
+            blk.appendChild(d2);
+          }
+          side.appendChild(blk);
         });
         row.appendChild(side);
       });
-      c.appendChild(row); cs.appendChild(c);
+      c.appendChild(row);
+      var memo = el("div", "memo");                                                      // メモ：サバイバー目線とハンター目線で、別々
+      memo.appendChild(el("h4", "", pair[1] + "のメモ（戦略・メモなど。みんなで同時に書けます）"));
+      var ta = el("textarea"); ta.maxLength = 2000; ta.placeholder = "自由に書いてください"; ta.id = "memoText-" + v;
+      var timer = null, sid = setId();
+      ta.addEventListener("input", function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () { var o = {}; o["sets/" + sid + "/" + v + "/memo"] = ta.value || null; writeQuiet(o); }, 500);
+      });
+      memo.appendChild(ta); c.appendChild(memo);
+      cs.appendChild(c);
     });
     w.appendChild(cs);
-    var memo = el("div"); memo.id = "memo";
-    memo.appendChild(el("h4", "", "メモ（戦略・メモなど。みんなで同時に書けます）"));
-    var ta = el("textarea"); ta.maxLength = 2000; ta.placeholder = "自由に書いてください";
-    var timer = null, sid = setId();
-    ta.addEventListener("input", function () {
-      clearTimeout(timer);
-      timer = setTimeout(function () { var o = {}; o["sets/" + sid + "/memo"] = ta.value || null; writeQuiet(o); }, 500);
-    });
-    ta.id = "memoText";
-    memo.appendChild(ta); w.appendChild(memo);
+    SLOTSIG = slotSig();
   }
   function fill() {
     if (!META) return;
@@ -1726,47 +1878,70 @@
     } else {
       var s = curSet();
       if (s) {
+        if (SLOTSIG !== slotSig()) buildWork();                                        // スロットの数が変わった：枠を作り直す
         var req = reqIds(), lb = lbIds(), st = setState(), rd = curRound();
-        var gbv = {};
-        ["s", "h"].forEach(function (f) { gbv[f] = {}; globalList(f, rd, s).forEach(function (id) { gbv[f][id] = true; }); });
+        var gbv = {}, egbv = {};
+        ["s", "h"].forEach(function (f) {
+          gbv[f] = {}; globalList(f, rd, s).forEach(function (id) { gbv[f][id] = true; });
+          egbv[f] = {}; globalEnemy(f, rd, s).forEach(function (id) { egbv[f][id] = true; });
+        });
         var hard = hardOf(s);                                                           // ぜったい必須のキャラ（組の必須ではないもの）
-        [["s"], ["h"]].forEach(function (fa) {
-          var f = fa[0];
-          ["ban", "pick", "eban", "epick"].forEach(function (b) {
-            var d = $("blk-" + f + "-" + b);
-            if (!d) return;
-            var cap = capOf(s, f, b);
-            if (cap === 0) return;                                                      // できない枠：そのまま
-            var want = blockFaction(f, b);                                              // この枠に入るキャラの陣営
-            var auto = Object.keys(b === "pick" || b === "epick" ? hard : lb).map(Number).filter(function (id) { return CH[id] && CH[id].f === want; });
-            var manual = Object.keys(obj(obj(st[f])[b])).map(Number).filter(function (id) { return CH[id] && auto.indexOf(id) < 0; }).sort(byPlaced(obj(obj(st[f])[b])));      // 置いた順
-            var counted = manual.length + (b === "pick" || b === "epick" ? auto.length : 0);               // ローカルBANは、BANの人数には、数えない（別のカウント）
-            d.textContent = "";
-            d.classList.toggle("empty", !manual.length && !auto.length);
-            d.classList.toggle("exact", counted === cap);                                 // 人数がピッタリ揃った：枠線に、青いライン
-            var cst = isSurvivorPick(f, b) && (s.cb || []).length ? comboState(s, blockPickedMap(s, f, b), cap) : { blocked: {}, violated: {} };      // 組み合わせ禁止
-            auto.forEach(function (id) {
-              var aw = [];
-              if (b === "pick" || b === "epick") aw.push(reqWhy("req") + "（自動で入っているので、外せません）");
-              else aw.push(charName(id) + "は、ローカルBANのキャラのため、自動でBANの枠に入っています（BANの人数には数えません）。");
-              if (b === "pick" && gbv[f][id]) aw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）です。");
-              d.appendChild(makeTag(CH[id], { locked: true, req: !!req[id], bad: b === "pick" && !!gbv[f][id], why: aw }));
-            });      // 自動で入ったもの（外せない）
-            manual.forEach(function (id) {
-              var spec = "set:" + f + ":" + b;
-              var isBad = b === "pick" ? !!gbv[f][id] : b === "epick" ? false : !!lb[id];                // PICKは使えないキャラだと、警告
-              var mw = [];
-              if (req[id]) mw.push(reqWhy(req[id]));
-              if (isBad && b === "pick") mw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。");
-              if (isBad && (b === "ban" || b === "eban")) mw.push(charName(id) + "は、ローカルBANのキャラです（BANしても意味がありません）。");
-              if (cst.violated[id]) mw = mw.concat(cst.violated[id]);
-              var t = makeTag(CH[id], { req: !!req[id], bad: isBad, gray: !!cst.violated[id], why: mw, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
-              if (isSel(id, { kind: "blk", spec: spec })) t.classList.add("sel");
-              attachTag(t, CH[id], { kind: "blk", spec: spec });
-              d.appendChild(t);
+        var plSig = (PLAYERS || []).map(function (p) { return p.id + ":" + p.n + ":" + (p.f || ""); }).join("|");
+        function fillSel(sl, f) {                                                       // 選手名の選択肢：この陣営に応募している選手を先に
+          if (sl.getAttribute("data-sig") === plSig + f) return;
+          var ps = (PLAYERS || []).slice().sort(function (a, b) { return (b.f && b.f.indexOf(f) >= 0 ? 1 : 0) - (a.f && a.f.indexOf(f) >= 0 ? 1 : 0); });
+          sl.textContent = "";
+          var o0 = el("option", "", "（選手を選ぶ）"); o0.value = ""; sl.appendChild(o0);
+          ps.forEach(function (p) { var o = el("option", "", p.n); o.value = String(p.id); sl.appendChild(o); });
+          sl.setAttribute("data-sig", plSig + f);
+        }
+        ["s", "h"].forEach(function (f) {
+          ["ban", "pick", "eban", "epick"].forEach(function (base) {
+            var cap = capOf(s, f, base);
+            if (cap === 0) return;
+            var isPickT = base === "pick" || base === "epick", names = isPickT ? slotNames(f, base) : [base], multi = names.length > 1;
+            var want = blockFaction(f, base), shown = 0, autoN = 0;
+            names.forEach(function (b) {
+              var d = $("blk-" + f + "-" + b);
+              if (!d) return;
+              var spec = "set:" + f + ":" + b, mapB = obj(obj(st[f])[b]);
+              var auto = Object.keys(isPickT ? hard : lb).map(Number).filter(function (id) { return CH[id] && CH[id].f === want; });
+              var manual = Object.keys(mapB).map(Number).filter(function (id) { return CH[id] && mapB[id] && auto.indexOf(id) < 0; }).sort(byPlaced(mapB));      // 置いた順
+              var counted = manual.length + (isPickT ? auto.length : 0);
+              if (b === base) { shown = counted; autoN = auto.length; }
+              d.textContent = "";
+              d.classList.toggle("empty", !manual.length && !auto.length);
+              d.classList.toggle("exact", counted === cap);                                 // 人数がピッタリ揃った：枠線に、青いライン
+              var picked = {}; manual.concat(isPickT ? auto : []).forEach(function (id) { picked[id] = true; });
+              var cst = isSurvivorPick(f, base) && (s.cb || []).length ? comboState(s, picked, cap) : { blocked: {}, violated: {} };      // 組み合わせ禁止
+              function badOf(id) { return base === "pick" ? !!gbv[f][id] : base === "epick" ? !!egbv[f][id] : !!lb[id]; }
+              auto.forEach(function (id) {
+                var aw = [];
+                if (isPickT) aw.push(reqWhy("req") + "（自動で入っているので、外せません）");
+                else aw.push(charName(id) + "は、ローカルBANのキャラのため、自動でBANの枠に入っています（BANの人数には数えません）。");
+                if (base === "pick" && gbv[f][id]) aw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）です。");
+                d.appendChild(makeTag(CH[id], { locked: true, req: !!req[id], bad: isPickT && badOf(id), why: aw }));
+              });      // 自動で入ったもの（外せない）
+              manual.forEach(function (id) {
+                var isBad = badOf(id), mw = [];
+                if (req[id]) mw.push(reqWhy(req[id]));
+                if (isBad && base === "pick") mw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。");
+                if (isBad && base === "epick") mw.push(charName(id) + "は、前のセットで予想したキャラ（相手のGLOBAL BAN）のため、PICKできない予想になります。");
+                if (isBad && (base === "ban" || base === "eban")) mw.push(charName(id) + "は、ローカルBANのキャラです（BANしても意味がありません）。");
+                if (cst.violated[id]) mw = mw.concat(cst.violated[id]);
+                var t = makeTag(CH[id], { req: !!req[id], bad: isBad, gray: !!cst.violated[id], why: mw, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
+                if (isSel(id, { kind: "blk", spec: spec })) t.classList.add("sel");
+                attachTag(t, CH[id], { kind: "blk", spec: spec });
+                d.appendChild(t);
+              });
+              var sl = $("psel-" + f + "-" + b);                                         // スロットの選手名
+              if (sl) { fillSel(sl, f); sl.value = String(obj(obj(st[f]).pl)[b] || ""); }
             });
-            var c = $("cnt-" + f + "-" + b);
-            if (c) { c.textContent = counted + " / " + cap + ((b === "ban" || b === "eban") && auto.length ? "（＋ローカルBAN " + auto.length + "）" : ""); c.className = "cnt" + (counted > cap ? " over" : ""); }
+            var c = $("cnt-" + f + "-" + base);
+            if (c) {
+              if (multi) { c.textContent = ""; c.className = "cnt"; }                   // スロットがあるときは、「3 / 4」は出さない
+              else { c.textContent = shown + " / " + cap + ((base === "ban" || base === "eban") && autoN ? "（＋ローカルBAN " + autoN + "）" : ""); c.className = "cnt" + (shown > cap ? " over" : ""); }
+            }
           });
           var g = $("blk-" + f + "-gb");
           if (g) {
@@ -1783,9 +1958,16 @@
               g.appendChild(makeTag(CH[id], o2));
             });
           }
+          var eg = $("blk-" + f + "-egb");
+          if (eg) {                                                                     // 相手のGLOBAL BAN（予想）：前のセットの、相手のPICK予想
+            eg.textContent = "";
+            var el3 = globalEnemy(f, rd, s);
+            eg.classList.toggle("empty", !el3.length);
+            el3.forEach(function (id) { eg.appendChild(makeTag(CH[id], { locked: true, why: [charName(id) + "は、前のセットで、相手がPICKすると予想したキャラです（相手のGLOBAL BAN）。"] })); });
+          }
+          var ta = $("memoText-" + f);                                                  // メモ（この目線の）
+          if (ta) { var raw = obj(st[f]).memo, mv = String(raw != null ? raw : (f === "s" ? st.memo : "") || ""); if (document.activeElement !== ta && ta.value !== mv) ta.value = mv; }
         });
-        var ta = $("memoText");
-        if (ta) { var v = String(obj(st).memo || ""); if (document.activeElement !== ta && ta.value !== v) ta.value = v; }
       }
     }
     showNotice();
@@ -1813,15 +1995,15 @@
   var LOGREADY = false, FAVINIT_SENT = {};
   function maybeInitFav() {                                                          // 大会BOTのチーム：選手登録の得意キャラを、常用キャラに入れる（選手ごとに、1回だけ。あとで消しても、戻さない）
     if (!LOGREADY || FREE || !META || WIPED || !KEY) return;
-    var ops = {}, any = false, i = 0;
+    var ops = {}, any = false, i = 0, who = 0;
     (META.players || []).forEach(function (p) {
       if (!p || p.id == null || !(p.fav || []).length) return;
       if (obj(STATE.favinit)[p.id] || FAVINIT_SENT[p.id]) return;
-      FAVINIT_SENT[p.id] = true; any = true;
+      FAVINIT_SENT[p.id] = true; any = true; who++;
       p.fav.forEach(function (cid) { if (CH[cid] && !obj(obj(STATE.fav)[p.id])[cid]) ops["fav/" + p.id + "/" + cid] = seq(i++); });
       ops["favinit/" + p.id] = 1;
     });
-    if (any) write(ops);
+    if (any) { write(ops); flash("選手登録の得意キャラを、常用キャラに入れました（" + who + "人ぶん。選手ごとに、はじめの1回だけです）。"); }
   }
   function onMeta(m) {
     if (!m) { if (!META) setStatus("データを待っています…（準備ができると表示されます）", ""); return; }
@@ -1834,7 +2016,7 @@
     if (FIRST_META) { FIRST_META = false; if (FREE && !savedTab) cur = { tab: "rules", set: "1" }; }              // 大会BOTを使わないチームは、最初は、ルール設定から
     if (isRoundTab() && !curRound()) cur = { tab: FREE ? "rules" : "fav", set: "1" };
     if (isRoundTab() && !curSet()) cur.set = (curRound().sets[0] || {}).k;
-    var memoFocused = document.activeElement && document.activeElement.id === "memoText";
+    var memoFocused = document.activeElement && String(document.activeElement.id || "").indexOf("memoText") === 0;
     if (memoFocused) { buildTabs(); buildPalette(); fill(); } else buildAll();
     maybeInitFav();
   }
