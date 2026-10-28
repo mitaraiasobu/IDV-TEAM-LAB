@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ja">
+<html lang="ja" data-style="cyber" data-tone="dark">
 <head>
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https://mitaraiasobu.github.io data:; connect-src https://idv-team-lab-default-rtdb.asia-southeast1.firebasedatabase.app https://mitaraiasobu.github.io; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
@@ -16,8 +16,11 @@
      ・キャラの顔の画像は、大会のページ（window.LAB_ASSET_BASE）のものを読む。
      ・中身（キャラ・名札・ドラッグ・職業の並び替え・スマホの回転）は、大会BOTの作戦ボードと同じ。 -->
 <style>
-  :root { --bg: #0f1218; --panel: #181d27; --panel2: #202735; --line: #2f394d; --text: #e8ecf4; --sub: #93a0b8;
-          --h: #d8334a; --h2: #7d1b29; --s: #2f7be0; --s2: #173d73; --gold: #ffd23f; --ok: #3ecf8e; }
+  :root { --bg0: #05070b; --fg0: #f2f6ff; --ac: #22d3ee; --ac-on: #03121a;                          /* LABごとに変えられる3色：背景・文字・サブカラー */
+          --bg: var(--bg0); --text: var(--fg0);
+          --panel: color-mix(in srgb, var(--bg0) 91%, var(--fg0)); --panel2: color-mix(in srgb, var(--bg0) 83%, var(--fg0));
+          --line: color-mix(in srgb, var(--bg0) 70%, var(--fg0)); --sub: color-mix(in srgb, var(--fg0) 62%, var(--bg0));
+          --h: #d8334a; --h2: #7d1b29; --s: #2f7be0; --s2: #173d73; --gold: #ffd23f; --ok: #3ecf8e; }   /* ハンターの赤・サバイバーの青は、固定 */
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: "Hiragino Sans", "Yu Gothic", "Meiryo", system-ui, sans-serif; }
   #stage { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; transform-origin: 0 0; }
@@ -119,7 +122,7 @@
   #notice .newid { background: #3a2a10; border: 1px solid #ff9f1a; color: #ffd28a; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   #notice .newid button, .btn { appearance: none; border: 1px solid #6f84ad; background: var(--panel2); color: var(--text); padding: 4px 12px; border-radius: 6px; font: inherit; font-size: 12px; cursor: pointer; }
   header .hbtn { margin-left: 6px; }
-  #stage[hidden], #gate[hidden], #hist[hidden] { display: none; }
+  #stage[hidden], #gate[hidden], #hist[hidden], #theme[hidden] { display: none; }
   #gate { position: fixed; inset: 0; overflow: auto; background: var(--bg); display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px; z-index: 50; }
   #gate .card { width: min(560px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px 20px 16px; }
   #gate h1 { margin: 0 0 4px; font-size: 22px; letter-spacing: .04em; } #gate .tm { color: var(--sub); margin-bottom: 12px; font-size: 14px; }
@@ -132,8 +135,8 @@
   #hist .danger .del[disabled] { opacity: .5; cursor: wait; }
   #hist .danger .dmsg { margin-top: 8px; min-height: 16px; color: #ff9aa5; }
   #gate .eye, #hist .eye { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); padding: 5px 10px; font-size: 13px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
-  #gate .welcome { color: #fff; line-height: 1.7; margin: 10px 0 4px; } #gate .welcome b { font-size: 17px; } #gate .welcome .steps { margin-top: 8px; font-size: 14px; }
-  #gate .consent h3 { margin: 14px 0 4px; font-size: 14px; color: #fff; } #gate .consent div { font-size: 12.5px; line-height: 1.7; color: var(--text); margin: 2px 0; }
+  #gate .welcome { color: var(--text); line-height: 1.7; margin: 10px 0 4px; } #gate .welcome b { font-size: 17px; } #gate .welcome .steps { margin-top: 8px; font-size: 14px; }
+  #gate .consent h3 { margin: 14px 0 4px; font-size: 14px; color: var(--text); } #gate .consent div { font-size: 12.5px; line-height: 1.7; color: var(--text); margin: 2px 0; }
   #gate .consent .bul { padding-left: 1em; text-indent: -1em; } #gate .consent .links a { display: block; color: #8cc4ff; word-break: break-all; font-size: 12px; margin: 2px 0; }
   #gate .nogo { display: block; margin: 10px auto 0; opacity: .85; }
   #gate .go { margin-top: 14px; width: 100%; padding: 11px; font-size: 16px; font-weight: 700; background: #2f7be0; border: 0; color: #fff; border-radius: 8px; cursor: pointer; }
@@ -153,16 +156,173 @@
   #hist .note { font-size: 12.5px; line-height: 1.6; color: #ffc9ce; background: #4a1219; border: 1px solid #ff3b52; border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
   #hist .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0; font-size: 13px; }
   #hist input { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; font: inherit; }
+  /* ───────── デザイン：色（3色）と、スタイル（5種類）。LABごと。軽い動き（transform と opacity だけ） ───────── */
+  #stage { overflow: hidden; }
+  #stage > header, #stage > nav, #stage > #notice, #stage > main { position: relative; z-index: 1; }
+  #stage::before, #stage::after { content: ""; position: absolute; pointer-events: none; display: none; z-index: 0; }
+  #gate { background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--ac) 14%, var(--bg)), var(--bg) 62%); }
+  nav button:hover, .btn:hover { border-color: var(--ac); }
+  nav button.on { border-color: var(--ac); border-bottom-color: var(--panel2); box-shadow: inset 0 2px 0 var(--ac); }
+  #gate .go { background: var(--ac); color: var(--ac-on); }
+  #gate .card { border-color: color-mix(in srgb, var(--ac) 40%, var(--line)); }
+  #theme { position: fixed; inset: 0; z-index: 41; background: rgba(0,0,0,.78); overflow: auto; padding: 14px; } #theme[hidden] { display: none; }
+  #theme .card { max-width: 640px; margin: 0 auto; background: var(--panel); border: 1px solid color-mix(in srgb, var(--ac) 45%, var(--line)); border-radius: 12px; padding: 14px 16px; }
+  #theme h2 { margin: 0 0 6px; font-size: 18px; } #theme h3 { margin: 16px 0 6px; font-size: 14px; color: var(--sub); }
+  #theme .tnote { font-size: 12.5px; line-height: 1.6; background: color-mix(in srgb, var(--ac) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--ac) 50%, var(--line)); border-radius: 8px; padding: 8px 10px; margin: 8px 0; }
+  #theme .trow { display: flex; align-items: center; gap: 10px; margin: 8px 0; font-size: 14px; } #theme .tl { flex: 1; }
+  #theme input[type=color] { width: 54px; height: 34px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
+  #theme .thx { font-family: Consolas, monospace; font-size: 12px; color: var(--sub); width: 64px; }
+  #theme .styles { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+  #theme .styles button { padding: 12px 8px; font: inherit; font-size: 14px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }
+  #theme .styles button.on { border-color: var(--ac); box-shadow: 0 0 0 1px var(--ac); background: color-mix(in srgb, var(--ac) 16%, var(--panel2)); font-weight: 700; }
+  #theme .styles button small { display: block; font-size: 10.5px; color: var(--sub); font-weight: 400; margin-top: 2px; }
+  #theme .trow2 { display: flex; gap: 8px; margin-top: 16px; }
+
+  /* サイバー：ドット絵（ピクセル）の階段状の枠・ドットの格子・画面全体の走査線・ネオン。ゲームのような、角ばった見た目 */
+  html[data-style="cyber"] body, html[data-style="cyber"] button, html[data-style="cyber"] input, html[data-style="cyber"] textarea, html[data-style="cyber"] select {
+    font-family: "MS Gothic", "ＭＳ ゴシック", "Osaka-Mono", "DotGothic16", Consolas, "SF Mono", Menlo, "Hiragino Sans", "Yu Gothic", monospace; -webkit-font-smoothing: none; text-rendering: optimizeSpeed; }
+  html[data-style="cyber"] header h1 { letter-spacing: .12em; color: var(--ac); animation: cy-flicker 7s infinite;
+    text-shadow: 3px 3px 0 color-mix(in srgb, var(--ac) 35%, #000), 0 0 12px color-mix(in srgb, var(--ac) 55%, transparent); }
+  html[data-style="cyber"] header h1::after { content: "_"; animation: cy-cursor 1s steps(1) infinite; }
+  /* 枠：上下左右に、4pxの線を重ねる（角が欠けた、階段状の枠） */
+  html[data-style="cyber"] #pal, html[data-style="cyber"] .box, html[data-style="cyber"] .rules .sec, html[data-style="cyber"] #hist .card, html[data-style="cyber"] #theme .card, html[data-style="cyber"] #gate .card {
+    border: 0; border-radius: 0; clip-path: none;
+    box-shadow: 0 -4px 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), 0 4px 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), -4px 0 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), 4px 0 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), 0 0 22px color-mix(in srgb, var(--ac) 22%, transparent), inset 0 0 0 2px color-mix(in srgb, var(--ac) 14%, transparent); }
+  html[data-style="cyber"] .corner { border-radius: 0; }
+  html[data-style="cyber"] .rules .sec { margin-bottom: 18px; } html[data-style="cyber"] .players { gap: 18px; } html[data-style="cyber"] #work { padding: 6px 8px 24px; }   /* 枠の線が、くっつかない・切れないように */
+  html[data-style="cyber"] nav button, html[data-style="cyber"] .btn, html[data-style="cyber"] #gate .go, html[data-style="cyber"] #gate .eye {
+    border: 0; border-radius: 0; letter-spacing: .06em;
+    box-shadow: 0 -2px 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), 0 2px 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), -2px 0 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)), 2px 0 0 0 color-mix(in srgb, var(--ac) 75%, var(--bg0)); margin-top: 2px; margin-bottom: 2px; }
+  html[data-style="cyber"] nav button:hover, html[data-style="cyber"] .btn:hover { box-shadow: 0 -2px 0 0 var(--ac), 0 2px 0 0 var(--ac), -2px 0 0 0 var(--ac), 2px 0 0 0 var(--ac), 0 0 12px color-mix(in srgb, var(--ac) 50%, transparent); }
+  html[data-style="cyber"] nav button:active, html[data-style="cyber"] .btn:active, html[data-style="cyber"] #gate .go:active { transform: translateY(2px); }
+  html[data-style="cyber"] nav button.on { background: color-mix(in srgb, var(--ac) 18%, var(--panel2)); color: var(--ac);
+    box-shadow: 0 -2px 0 0 var(--ac), 0 2px 0 0 var(--ac), -2px 0 0 0 var(--ac), 2px 0 0 0 var(--ac), 0 0 12px color-mix(in srgb, var(--ac) 45%, transparent); }
+  html[data-style="cyber"] #gate .go { margin-top: 16px; }
+  html[data-style="cyber"] input, html[data-style="cyber"] textarea, html[data-style="cyber"] select { border-radius: 0; }
+  html[data-style="cyber"] .tag, html[data-style="cyber"] .tag .face { border-radius: 0; }
+  html[data-style="cyber"] .drop { border-radius: 0; border: 2px dotted var(--line); }
+  html[data-style="cyber"] .tag:hover { box-shadow: 0 0 10px color-mix(in srgb, var(--ac) 60%, transparent); }
+  /* 背景：ドットの格子（ゆっくり流れる）。ログイン画面にも */
+  html[data-style="cyber"] #stage::before { display: block; left: 0; right: 0; top: -16px; height: calc(100% + 16px); will-change: transform; animation: cy-grid 4s linear infinite;
+    background-image: radial-gradient(circle, color-mix(in srgb, var(--ac) 40%, transparent) 1.3px, transparent 1.7px); background-size: 16px 16px; }
+  html[data-style="cyber"] #gate { background: radial-gradient(circle, color-mix(in srgb, var(--ac) 32%, transparent) 1.3px, transparent 1.7px) 0 0 / 16px 16px,
+                                              radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--ac) 14%, var(--bg)), var(--bg) 62%); }
+  html[data-style="cyber"] #stage::after { display: block; left: 0; right: 0; top: 0; height: 140px; will-change: transform; animation: cy-scan 6s linear infinite;
+    background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--ac) 14%, transparent) 50%, transparent); }
+  /* 画面全体の走査線（ブラウン管のような横線） */
+  html[data-style="cyber"] body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 60; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .13) 0 1px, transparent 1px 3px); }
+  @keyframes cy-grid { to { transform: translateY(16px); } }
+  @keyframes cy-scan { from { transform: translateY(-160px); } to { transform: translateY(100vh); } }
+  @keyframes cy-flicker { 0%, 92%, 100% { opacity: 1; } 93% { opacity: .55; } 94% { opacity: 1; } 96% { opacity: .7; } 97% { opacity: 1; } }
+  @keyframes cy-cursor { 50% { opacity: 0; } }
+
+  /* キュート：白とピンク・丸いフォント・ふわふわ浮かぶハートと星・レースのふち・弾むボタン */
+  html[data-style="cute"] { accent-color: var(--ac); }
+  html[data-style="cute"] body, html[data-style="cute"] button, html[data-style="cute"] input, html[data-style="cute"] textarea, html[data-style="cute"] select {
+    font-family: "Hiragino Maru Gothic ProN", "HG丸ｺﾞｼｯｸM-PRO", "HGMaruGothicMPRO", "Arial Rounded MT Bold", "Yu Gothic UI", "Meiryo UI", "Meiryo", system-ui, sans-serif; letter-spacing: .03em; }
+  html[data-style="cute"] ::selection { background: color-mix(in srgb, var(--ac) 35%, transparent); }
+  html[data-style="cute"] *::-webkit-scrollbar { width: 10px; height: 10px; }
+  html[data-style="cute"] *::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ac) 60%, transparent); border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
+  html[data-style="cute"] #stage, html[data-style="cute"] #gate {
+    background: radial-gradient(circle at 12% 8%, color-mix(in srgb, var(--ac) 24%, transparent), transparent 38%),
+                radial-gradient(circle at 88% 16%, color-mix(in srgb, var(--ac) 16%, transparent), transparent 42%),
+                radial-gradient(circle at 50% 105%, color-mix(in srgb, var(--ac) 22%, transparent), transparent 52%), var(--bg); }
+  html[data-style="cute"] header h1 { color: var(--ac); font-weight: 800; letter-spacing: .08em; display: inline-block;
+    text-shadow: 0 2px 0 color-mix(in srgb, var(--bg0) 70%, #fff), 0 0 14px color-mix(in srgb, var(--ac) 40%, transparent); animation: cu-bob 3.2s ease-in-out infinite; }
+  html[data-style="cute"] header h1::before { content: "♡ "; } html[data-style="cute"] header h1::after { content: " ♡"; animation: cu-twinkle 2.4s ease-in-out infinite; }
+  html[data-style="cute"] #pal, html[data-style="cute"] .box, html[data-style="cute"] .corner, html[data-style="cute"] .rules .sec, html[data-style="cute"] #hist .card, html[data-style="cute"] #theme .card, html[data-style="cute"] #gate .card { border-radius: 26px; }
+  html[data-style="cute"] #pal, html[data-style="cute"] .box, html[data-style="cute"] .rules .sec, html[data-style="cute"] #hist .card, html[data-style="cute"] #theme .card, html[data-style="cute"] #gate .card {
+    border: 2px dashed color-mix(in srgb, var(--ac) 60%, var(--bg0)); background: var(--panel);
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--ac) 18%, transparent), inset 0 0 0 4px color-mix(in srgb, var(--bg0) 60%, transparent); }
+  html[data-style="cute"] #gate .card { position: relative; z-index: 1; }
+  html[data-style="cute"] .tag { border-radius: 16px; transition: transform .2s cubic-bezier(.3, 1.6, .5, 1); } html[data-style="cute"] .tag .face { border-radius: 13px; }
+  html[data-style="cute"] .tag:hover { transform: rotate(-3deg) scale(1.08); }
+  html[data-style="cute"] nav button { border-radius: 999px; margin-bottom: 4px; border: 2px solid color-mix(in srgb, var(--ac) 50%, var(--line)); transition: transform .2s cubic-bezier(.3, 1.6, .5, 1), box-shadow .2s; }
+  html[data-style="cute"] nav button:hover, html[data-style="cute"] .btn:hover { transform: translateY(-2px) scale(1.06); }
+  html[data-style="cute"] nav button:active, html[data-style="cute"] .btn:active, html[data-style="cute"] #gate .go:active { transform: scale(.94); }
+  html[data-style="cute"] nav button.on { background: var(--ac); color: var(--ac-on); border-color: var(--ac); box-shadow: 0 5px 12px color-mix(in srgb, var(--ac) 45%, transparent); }
+  html[data-style="cute"] .btn { border-radius: 999px; border: 2px solid color-mix(in srgb, var(--ac) 50%, var(--line)); transition: transform .2s cubic-bezier(.3, 1.6, .5, 1); }
+  html[data-style="cute"] #gate .go { border-radius: 999px; box-shadow: 0 6px 14px color-mix(in srgb, var(--ac) 40%, transparent); transition: transform .2s cubic-bezier(.3, 1.6, .5, 1); }
+  html[data-style="cute"] #stage::before, html[data-style="cute"] #gate::before { content: ""; display: block; position: absolute; pointer-events: none; left: 0; right: 0; top: -240px; height: calc(100% + 240px); z-index: 0;
+    background: var(--ac); opacity: .26; will-change: transform; animation: cu-hearts 46s linear infinite;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='240'%20height='240'%20viewBox='0%200%20240%20240'%3E%3Cpath%20transform='translate(30%2040)%20scale(1.0)'%20d='M12%2021C5%2015%200%2011.5%200%206.5A5.5%205.5%200%200%201%2012%204.2A5.5%205.5%200%200%201%2024%206.5C24%2011.5%2019%2015%2012%2021Z'%20fill='black'/%3E%3Cpath%20transform='translate(150%20120)%20scale(1.4)'%20d='M12%2021C5%2015%200%2011.5%200%206.5A5.5%205.5%200%200%201%2012%204.2A5.5%205.5%200%200%201%2024%206.5C24%2011.5%2019%2015%2012%2021Z'%20fill='black'/%3E%3Cpath%20transform='translate(70%20190)%20scale(0.8)'%20d='M12%2021C5%2015%200%2011.5%200%206.5A5.5%205.5%200%200%201%2012%204.2A5.5%205.5%200%200%201%2024%206.5C24%2011.5%2019%2015%2012%2021Z'%20fill='black'/%3E%3Cpath%20transform='translate(200%2030)%20scale(0.7)'%20d='M12%2021C5%2015%200%2011.5%200%206.5A5.5%205.5%200%200%201%2012%204.2A5.5%205.5%200%200%201%2024%206.5C24%2011.5%2019%2015%2012%2021Z'%20fill='black'/%3E%3Cpath%20transform='translate(120%2050)%20scale(1.0)'%20d='M10%200C11%206%2014%209%2020%2010C14%2011%2011%2014%2010%2020C9%2014%206%2011%200%2010C6%209%209%206%2010%200Z'%20fill='black'/%3E%3Cpath%20transform='translate(20%20130)%20scale(0.9)'%20d='M10%200C11%206%2014%209%2020%2010C14%2011%2011%2014%2010%2020C9%2014%206%2011%200%2010C6%209%209%206%2010%200Z'%20fill='black'/%3E%3Cpath%20transform='translate(180%20200)%20scale(1.1)'%20d='M10%200C11%206%2014%209%2020%2010C14%2011%2011%2014%2010%2020C9%2014%206%2011%200%2010C6%209%209%206%2010%200Z'%20fill='black'/%3E%3Ccircle%20cx='100'%20cy='110'%20r='3'%20fill='black'/%3E%3Ccircle%20cx='220'%20cy='150'%20r='2.4'%20fill='black'/%3E%3Ccircle%20cx='50'%20cy='90'%20r='2.2'%20fill='black'/%3E%3Ccircle%20cx='130'%20cy='215'%20r='2.6'%20fill='black'/%3E%3C/svg%3E") 0 0 / 240px 240px repeat; mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='240'%20height='240'%20viewBox='0%200%20240%20240'%3E%3Cpath%20transform='translate(30%2040)%20scale(1.0)'%20d='M12%2021C5%2015%200%2011.5%200%206.5A5.5%205.5%200%200%201%2012%204.2A5.5%205.5%200%200%201%2024%206.5C24%2011.5%2019%2015%2012%2021Z'%20fill='black'/%3E%3Cpath%20transform='translate(150%20120)%20scale(1.4)'%20d='M12%2021C5%2015%200%2011.5%200%206.5A5.5%205.5%200%200%201%2012%204.2A5.5%205.5%200%200%201%2024%206.5C24%2011.5%2019%2015%2012%2021Z'%20fill='black'/%3E%3Cpath%20transform='translate(70%20190)%20scale(0.8)'%20d='M12%2021C5%2015%200%2011.5%200%206.5A5.5%205.5%200%200%201%2012%204.2A5.5%205.5%200%200%201%2024%206.5C24%2011.5%2019%2015%2012%2021Z'%20fill='black'/%3E%3Cpath%20transform='translate(200%2030)%20scale(0.7)'%20d='M12%2021C5%2015%200%2011.5%200%206.5A5.5%205.5%200%200%201%2012%204.2A5.5%205.5%200%200%201%2024%206.5C24%2011.5%2019%2015%2012%2021Z'%20fill='black'/%3E%3Cpath%20transform='translate(120%2050)%20scale(1.0)'%20d='M10%200C11%206%2014%209%2020%2010C14%2011%2011%2014%2010%2020C9%2014%206%2011%200%2010C6%209%209%206%2010%200Z'%20fill='black'/%3E%3Cpath%20transform='translate(20%20130)%20scale(0.9)'%20d='M10%200C11%206%2014%209%2020%2010C14%2011%2011%2014%2010%2020C9%2014%206%2011%200%2010C6%209%209%206%2010%200Z'%20fill='black'/%3E%3Cpath%20transform='translate(180%20200)%20scale(1.1)'%20d='M10%200C11%206%2014%209%2020%2010C14%2011%2011%2014%2010%2020C9%2014%206%2011%200%2010C6%209%209%206%2010%200Z'%20fill='black'/%3E%3Ccircle%20cx='100'%20cy='110'%20r='3'%20fill='black'/%3E%3Ccircle%20cx='220'%20cy='150'%20r='2.4'%20fill='black'/%3E%3Ccircle%20cx='50'%20cy='90'%20r='2.2'%20fill='black'/%3E%3Ccircle%20cx='130'%20cy='215'%20r='2.6'%20fill='black'/%3E%3C/svg%3E") 0 0 / 240px 240px repeat; }
+  html[data-style="cute"] #gate::before { position: fixed; }
+  html[data-style="cute"] #stage::after { display: block; left: -20px; right: 0; top: 0; height: 14px; z-index: 2; will-change: transform; animation: cu-ribbon 3s linear infinite;
+    background: radial-gradient(circle at 10px 0, var(--ac) 9px, transparent 10px) 0 0 / 20px 14px repeat-x; }
+  @keyframes cu-hearts { from { transform: translateY(0); } to { transform: translateY(240px); } }
+  @keyframes cu-ribbon { to { transform: translateX(20px); } }
+  @keyframes cu-bob { 50% { transform: translateY(-3px); } }
+  @keyframes cu-twinkle { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
+  /* ゴシック：明朝体・二重線・暗い縁どり・ろうそくのゆらぎ */
+  html[data-style="gothic"] body, html[data-style="gothic"] button, html[data-style="gothic"] input, html[data-style="gothic"] textarea { font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif; }
+  html[data-style="gothic"] header h1 { letter-spacing: .18em; color: var(--ac); text-shadow: 0 0 14px color-mix(in srgb, var(--ac) 55%, transparent); animation: go-glow 6s ease-in-out infinite; }
+  html[data-style="gothic"] header h1::before { content: "✠ "; } html[data-style="gothic"] header h1::after { content: " ✠"; }
+  html[data-style="gothic"] #pal, html[data-style="gothic"] .box, html[data-style="gothic"] .rules .sec, html[data-style="gothic"] #hist .card, html[data-style="gothic"] #theme .card, html[data-style="gothic"] #gate .card {
+    border: 3px double color-mix(in srgb, var(--ac) 55%, var(--line)); border-radius: 4px; background: linear-gradient(180deg, var(--panel), color-mix(in srgb, var(--bg0) 94%, var(--ac))); }
+  html[data-style="gothic"] nav button { border-radius: 0; letter-spacing: .1em; border-color: color-mix(in srgb, var(--ac) 40%, var(--line)); }
+  html[data-style="gothic"] nav button.on { color: var(--ac); background: color-mix(in srgb, var(--ac) 10%, var(--panel2)); }
+  html[data-style="gothic"] #stage::before { display: block; inset: 0; z-index: 2; background: radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(0, 0, 0, .5) 100%); animation: go-breathe 7s ease-in-out infinite; }
+  html[data-style="gothic"] #stage::after { display: block; left: 0; right: 0; top: 0; height: 45%; background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--ac) 20%, transparent), transparent 70%); animation: go-candle 5s steps(1) infinite; }
+  @keyframes go-breathe { 50% { opacity: .65; } }
+  @keyframes go-candle { 0% { opacity: .9; } 12% { opacity: .7; } 25% { opacity: 1; } 41% { opacity: .8; } 57% { opacity: .95; } 73% { opacity: .7; } 88% { opacity: 1; } }
+  @keyframes go-glow { 50% { text-shadow: 0 0 26px color-mix(in srgb, var(--ac) 80%, transparent); } }
+
+  /* ロック：太い字・斜めに切った形・ひっかき傷・ときどき走る光 */
+  html[data-style="rock"] header h1, html[data-style="rock"] nav button, html[data-style="rock"] .corner > h3, html[data-style="rock"] #hist h2, html[data-style="rock"] #theme h2 { font-family: Impact, "Arial Black", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; font-synthesis: none; }
+  html[data-style="rock"] header h1 { font-weight: 400; font-style: italic; letter-spacing: .06em; color: var(--text); text-shadow: 3px 3px 0 var(--ac); transform-origin: left center; animation: ro-punch 5s ease-in-out infinite; }
+  html[data-style="rock"] #pal, html[data-style="rock"] .box, html[data-style="rock"] .rules .sec, html[data-style="rock"] #hist .card, html[data-style="rock"] #theme .card, html[data-style="rock"] #gate .card {
+    border-radius: 0; border-left: 5px solid var(--ac); clip-path: polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%); }
+  html[data-style="rock"] nav button { border-radius: 0; transform: skewX(-12deg); font-weight: 400; letter-spacing: .04em; }
+  html[data-style="rock"] nav button.on { background: var(--ac); color: var(--ac-on); box-shadow: none; }
+  html[data-style="rock"] .tag { border-radius: 3px; } html[data-style="rock"] .btn { border-radius: 0; font-weight: 700; }
+  html[data-style="rock"] #stage::before { display: block; inset: 0; background: repeating-linear-gradient(115deg, color-mix(in srgb, var(--fg0) 5%, transparent) 0 1px, transparent 1px 9px), repeating-linear-gradient(62deg, color-mix(in srgb, var(--fg0) 3%, transparent) 0 1px, transparent 1px 23px); }
+  html[data-style="rock"] #stage::after { display: block; top: 0; bottom: 0; left: -30%; width: 28%; will-change: transform; transform: skewX(-20deg) translateX(-150%); animation: ro-slash 7s ease-in infinite;
+    background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--ac) 22%, transparent) 50%, transparent); }
+  @keyframes ro-slash { 0%, 70% { transform: skewX(-20deg) translateX(-150%); } 100% { transform: skewX(-20deg) translateX(520%); } }
+  @keyframes ro-punch { 0%, 90%, 100% { transform: scale(1); } 94% { transform: scale(1.08); } }
+
+  /* シンプル：すっきりした、ガラスのようなパネル。細い線がゆっくり伸びる */
+  html[data-style="simple"] header h1 { font-weight: 600; letter-spacing: .04em; }
+  html[data-style="simple"] header { border-bottom: 1px solid color-mix(in srgb, var(--ac) 30%, var(--line)); margin: 0 16px; padding: 10px 0 8px; }
+  html[data-style="simple"] header::after { content: ""; position: absolute; left: 0; bottom: -1px; height: 2px; width: 140px; background: var(--ac); transform-origin: left; animation: si-line 4s ease-in-out infinite alternate; }
+  html[data-style="simple"] #pal, html[data-style="simple"] .box, html[data-style="simple"] .rules .sec, html[data-style="simple"] #hist .card, html[data-style="simple"] #theme .card, html[data-style="simple"] #gate .card {
+    border-radius: 10px; border-color: color-mix(in srgb, var(--ac) 28%, var(--line)); background: color-mix(in srgb, var(--panel) 88%, transparent); }
+  html[data-style="simple"] nav button.on { border-bottom-color: var(--panel2); }
+  html[data-style="simple"] #stage::before { display: block; inset: 0; background: radial-gradient(ellipse at 15% 0%, color-mix(in srgb, var(--ac) 14%, transparent), transparent 55%); will-change: transform; animation: si-drift 12s ease-in-out infinite alternate; }
+  @keyframes si-line { from { transform: scaleX(.2); } to { transform: scaleX(1); } }
+  @keyframes si-drift { to { transform: translateX(6%); opacity: .7; } }
+
+  /* 背景が明るい色のとき（data-tone="light"）：濃い色の地に白い字の名札、読みにくい色の見出し、などを直す */
+  html[data-tone="light"] .tag { color: #fff; } html[data-tone="light"] .tag.sel { outline-color: var(--ac); }
+  html[data-tone="light"] .drop { background: color-mix(in srgb, var(--fg0) 5%, transparent); }
+  html[data-tone="light"] .drop.over { background: color-mix(in srgb, var(--ac) 22%, transparent); border-color: var(--ac); }
+  html[data-tone="light"] .drop.off { background: repeating-linear-gradient(45deg, color-mix(in srgb, var(--bg0) 92%, var(--fg0)), color-mix(in srgb, var(--bg0) 92%, var(--fg0)) 8px, color-mix(in srgb, var(--bg0) 85%, var(--fg0)) 8px, color-mix(in srgb, var(--bg0) 85%, var(--fg0)) 16px); }
+  html[data-tone="light"] .drop.empty::before { color: color-mix(in srgb, var(--fg0) 45%, var(--bg0)); }
+  html[data-tone="light"] .rolehd, html[data-tone="light"] .rules h5, html[data-tone="light"] .corner.s > h3, html[data-tone="light"] #hist .kv { color: #1f5fb4; }
+  html[data-tone="light"] .corner.h > h3 { color: #c3213a; } html[data-tone="light"] #hist .ke { color: #9a5b00; }
+  html[data-tone="light"] #hist .danger { color: #9b1428; } html[data-tone="light"] #hist .danger .dmsg, html[data-tone="light"] #gate .msg { color: #c1203f; }
+  html[data-tone="light"] #gate .consent .links a { color: #1f5fb4; }
+  /* 明るい背景では、パネルを白っぽく（くすまないように）。入力欄も、白に近く */
+  html[data-tone="light"][data-style="cute"] #pal, html[data-tone="light"][data-style="cute"] .box, html[data-tone="light"][data-style="cute"] .rules .sec, html[data-tone="light"][data-style="cute"] .corner,
+  html[data-tone="light"][data-style="cute"] #hist .card, html[data-tone="light"][data-style="cute"] #theme .card, html[data-tone="light"][data-style="cute"] #gate .card { background: color-mix(in srgb, var(--panel) 25%, #fff); }
+  html[data-tone="light"] input, html[data-tone="light"] textarea, html[data-tone="light"] select { background: color-mix(in srgb, var(--panel2) 35%, #fff); }
+  html[data-tone="light"] nav button { background: color-mix(in srgb, var(--panel) 30%, #fff); }
+  html[data-tone="light"] nav button.on { background: var(--panel2); }
+  html[data-tone="light"][data-style="cute"] nav button.on { background: var(--ac); }
+
+  @media (prefers-reduced-motion: reduce) { #stage::before, #stage::after, header h1, header h1::after, header::after, #gate::before { animation: none !important; } }
 </style>
 </head>
 <body>
 <script>window.LAB_DB_URL = "https://idv-team-lab-default-rtdb.asia-southeast1.firebasedatabase.app"; window.LAB_ASSET_BASE = "https://mitaraiasobu.github.io/IDV-tournament-BOT-brows/"; window.LAB_CHARS = {"chars":{"h":[{"id":54,"n":"復讐者","e":"🔥","i":"Hunter/HellEmber.webp"},{"id":55,"n":"道化師","e":"🚀","i":"Hunter/SmileyFace.webp"},{"id":56,"n":"断罪狩人","e":"🦌","i":"Hunter/Gamekeeper.webp"},{"id":57,"n":"リッパー","e":"✂","i":"Hunter/Jack_The_Ripper.webp"},{"id":58,"n":"結魂者","e":"🕸️","i":"Hunter/SoulWeaver.webp"},{"id":59,"n":"芸者","e":"🦋","i":"Hunter/Geisha.webp"},{"id":60,"n":"白黒無常","e":"☂","i":"Hunter/WuChang.webp"},{"id":61,"n":"写真家","e":"📷","i":"Hunter/Joseph%3B_smoother.webp"},{"id":62,"n":"狂眼","e":"🍺","i":"Hunter/MadEyes.webp"},{"id":63,"n":"黄衣の王","e":"🐙","i":"Hunter/TheFeaster.webp"},{"id":64,"n":"夢の魔女","e":"🐍","i":"Hunter/DreamWitch.webp"},{"id":65,"n":"泣き虫","e":"😭","i":"Hunter/AxeBoy.webp"},{"id":66,"n":"魔トカゲ","e":"🦎","i":"Hunter/EvilReptilian.webp"},{"id":67,"n":"血の女王","e":"👑","i":"Hunter/BloodyQueen.webp"},{"id":68,"n":"ガードNo.26","e":"💣","i":"Hunter/Guard26.webp"},{"id":69,"n":"使徒","e":"🐈","i":"Hunter/Disciple.webp"},{"id":70,"n":"ヴァイオリニスト","e":"🎻","i":"Hunter/Violinist.webp"},{"id":71,"n":"彫刻師","e":"🗿","i":"Hunter/Sculptor.webp"},{"id":72,"n":"アンデッド","e":"🧟","i":"Hunter/Undead.webp"},{"id":73,"n":"破輪","e":"☸️","i":"Hunter/TheBreakingWheel.webp"},{"id":74,"n":"漁師","e":"🧜‍♀️","i":"Hunter/Naiad.webp"},{"id":75,"n":"蝋人形師","e":"🕯","i":"Hunter/WaxArtist.webp"},{"id":76,"n":"悪夢","e":"🐓","i":"Hunter/Nightmare.webp"},{"id":77,"n":"書記官","e":"📜","i":"Hunter/Clerk.webp"},{"id":78,"n":"隠者","e":"⚡","i":"Hunter/Hermit.webp"},{"id":79,"n":"夜の番人","e":"🌪","i":"Hunter/NightWatch.webp"},{"id":80,"n":"フールズ・ゴールド","e":"⛏","i":"Hunter/FoolsGold.webp"},{"id":81,"n":"オペラ歌手","e":"🎤","i":"Hunter/OperaSinger.webp"},{"id":82,"n":"時空の影","e":"👻","i":"Hunter/TheShadow.webp"},{"id":83,"n":"足萎えの羊","e":"🐑","i":"Hunter/Goatman.webp"},{"id":84,"n":"フラバルー","e":"🎈","i":"Hunter/Hullabaloo.webp"},{"id":85,"n":"雑貨商","e":"🧺","i":"Hunter/Peddler.webp"},{"id":86,"n":"ビリヤードプレイヤー","e":"🎱","i":"Hunter/Cueist.webp"},{"id":87,"n":"女王蜂","e":"🐝","i":"Hunter/QueenBee.webp"},{"id":88,"n":"歯医者","e":"🦷","i":"Hunter/Dentist.webp"},{"id":89,"n":"心の獣","e":"🐺","i":"Hunter/Herztier.webp"}],"s":[{"id":1,"n":"幸運児","e":"🍀","i":"survivor/LuckyGuy.webp"},{"id":2,"n":"医師","e":"💉","i":"survivor/Doctor.webp"},{"id":3,"n":"弁護士","e":"⚖️","i":"survivor/Lawyer.webp"},{"id":4,"n":"空軍","e":"🔫","i":"survivor/Coordinator.webp"},{"id":5,"n":"庭師","e":"🌷","i":"survivor/Gardener.webp"},{"id":6,"n":"泥棒","e":"🔦","i":"survivor/Thief.webp"},{"id":7,"n":"傭兵","e":"🤕","i":"survivor/Mercenary.webp"},{"id":8,"n":"調香師","e":"🧴","i":"survivor/Perfumer.webp"},{"id":9,"n":"占い師","e":"🦉","i":"survivor/Seer.webp"},{"id":10,"n":"マジシャン","e":"🪄","i":"survivor/Magician.webp"},{"id":11,"n":"カウボーイ","e":"🤠","i":"survivor/Cowboy.webp"},{"id":12,"n":"冒険家","e":"📙","i":"survivor/Explorer.webp"},{"id":13,"n":"祭司","e":"🔯","i":"survivor/Priestess.webp"},{"id":14,"n":"機械技師","e":"🤖","i":"survivor/Mechanic.webp"},{"id":15,"n":"オフェンス","e":"🏈","i":"survivor/Forward.webp"},{"id":16,"n":"心眼","e":"👁️","i":"survivor/TheMindsEye.webp"},{"id":17,"n":"踊り子","e":"🩰","i":"survivor/FemaleDancer.webp"},{"id":18,"n":"納棺師","e":"⚰️","i":"survivor/Embalmer.webp"},{"id":19,"n":"探鉱者","e":"🧲","i":"survivor/Prospector.webp"},{"id":20,"n":"呪術師","e":"🔮","i":"survivor/Enchantress.webp"},{"id":21,"n":"野人","e":"🐗","i":"survivor/Wildling.webp"},{"id":22,"n":"曲芸師","e":"🤹","i":"survivor/Acrobat.webp"},{"id":23,"n":"一等航海士","e":"⚓","i":"survivor/FirstOfficer.webp"},{"id":24,"n":"バーメイド","e":"🥂","i":"survivor/Barmaid.webp"},{"id":25,"n":"ポストマン","e":"✉","i":"survivor/Postman.webp"},{"id":26,"n":"墓守","e":"🪦","i":"survivor/GraveKeeper.webp"},{"id":27,"n":"囚人","e":"⛓️","i":"survivor/Prisoner.webp"},{"id":28,"n":"昆虫学者","e":"🐛","i":"survivor/Entomologist.webp"},{"id":29,"n":"画家","e":"🎨","i":"survivor/Painter.webp"},{"id":30,"n":"バッツマン","e":"🏏","i":"survivor/Batter.webp"},{"id":31,"n":"玩具職人","e":"🧸","i":"survivor/ToyMerchant.webp"},{"id":32,"n":"患者","e":"❤️‍🩹","i":"survivor/Patient.webp"},{"id":33,"n":"心理学者","e":"❤","i":"survivor/Psychologist.webp"},{"id":34,"n":"小説家","e":"✍️","i":"survivor/Novelist.webp"},{"id":35,"n":"少女","e":"🎀","i":"survivor/LittleGirl.webp"},{"id":36,"n":"泣きピエロ","e":"🤡","i":"survivor/WeepingClown.webp"},{"id":37,"n":"教授","e":"🧪","i":"survivor/Professor.webp"},{"id":38,"n":"骨董商","e":"🪈","i":"survivor/Antiquarian.webp"},{"id":39,"n":"作曲家","e":"🎼","i":"survivor/Composer.webp"},{"id":40,"n":"記者","e":"📷","i":"survivor/Journalist.webp"},{"id":41,"n":"航空エンジニア","e":"🛩️","i":"survivor/Aeroplanist.webp"},{"id":42,"n":"応援団","e":"📣","i":"survivor/Cheerleader.webp"},{"id":43,"n":"人形師","e":"🎎","i":"survivor/Puppeteer.webp"},{"id":44,"n":"火災調査員","e":"🚒","i":"survivor/FireInvestigator.webp"},{"id":45,"n":"レディ・ファウロ","e":"🎲","i":"survivor/FaroLady.webp"},{"id":46,"n":"騎士","e":"⚔️","i":"survivor/Knight.webp"},{"id":47,"n":"気象学者","e":"🌦️","i":"survivor/Meteorologist.webp"},{"id":48,"n":"弓使い","e":"🏹","i":"survivor/Archer.webp"},{"id":49,"n":"脱出マスター","e":"🔓","i":"survivor/Escapologist.webp"},{"id":50,"n":"幻灯師","e":"🎞","i":"survivor/Lanternist.webp"},{"id":51,"n":"闘牛士","e":"🐂","i":"survivor/Matador.webp"},{"id":52,"n":"マイムアーティスト","e":"🎭","i":"survivor/MimeArtist.webp"},{"id":53,"n":"神童","e":"🌼","i":"survivor/Prodigy.webp"}]},"roles":[{"k":"decode","n":"解読職","e":"🔧","ids":[3,12,14,16,27,39,45]},{"k":"rescue","n":"救助職","e":"🚀","ids":[4,7,15,18,21,23,26,30,32,33,36,40,41,43,46,49,53]},{"k":"harass","n":"牽制職","e":"👟","ids":[1,2,5,6,7,8,10,11,13,17,19,20,22,24,28,29,31,32,33,37,38,41,42,43,44,47,48,50,51,52,53]},{"k":"support","n":"補助職","e":"🤝","ids":[2,5,9,11,13,15,17,18,19,20,21,24,25,27,28,29,30,31,33,34,35,36,37,42,44,47,49,50,51,52,53]}]};</script>
 <div id="gate"><div class="card" id="gateCard"></div></div>
 <div id="hist" hidden><div class="card" id="histCard"></div></div>
+<div id="theme" hidden><div class="card" id="themeCard"></div></div>
 <div id="stage" hidden>
 <header>
   <h1 id="ttl">IDV TEAM LAB</h1><span class="sub" id="sub"></span>
-  <button class="btn hbtn" id="histBtn" type="button">🕘 履歴・端末</button><span id="status">接続中…</span>
+  <button class="btn hbtn" id="themeBtn" type="button">🎨 デザイン</button><button class="btn hbtn" id="histBtn" type="button">🕘 履歴・端末</button><span id="status">接続中…</span>
 </header>
 <nav id="tabs1"></nav>
 <nav id="tabs2"></nav>
@@ -290,8 +450,8 @@
     var w = $("work"); w.textContent = "";
     w.appendChild(el("div", "empty-msg", msg));
   }
-  var DENIED = "読み取りが許可されていません。Firebaseの「ルール」が、IDV TEAM LABの設定になっていない可能性があります。管理者に伝えてください。";
-  var WAITING = "BOTが、このチームの場所を、まだ用意していません。しばらくしてから、開き直してください。";
+  var DENIED = "読み取りが許可されていません。Firebaseの「ルール」がIDV TEAM LABの設定になっていない可能性があります。管理者に伝えてください。";
+  var WAITING = "このチームの場所がまだ用意されていません。しばらくしてから、開き直してください。";
   function stream(name, onData) {
     var data = null, url = DBURL + "/" + name + ".json", es = null, poll = null;
     function emit() { onData(data); }
@@ -320,10 +480,36 @@
   var RAW = {}, EVT = {}, busy = false, again = false;
   var writeFailed = false;
   function applyOps(ops) { Object.keys(ops).forEach(function (p) { STATE = setPath(STATE, p, ops[p]); }); }
+  var PUSH_CHARS = "-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz", lastKeyTime = 0;
+  function newKey() {                                                          // 時刻順に並ぶ、20文字の記録の名前（Firebaseの自動の名前と同じ形）
+    var now = Math.max(Date.now(), lastKeyTime + 1), tm = now, s = "", i;
+    lastKeyTime = now;
+    for (i = 0; i < 8; i++) { s = PUSH_CHARS.charAt(tm % 64) + s; tm = Math.floor(tm / 64); }
+    var rnd = new Uint8Array(12); crypto.getRandomValues(rnd);
+    for (i = 0; i < 12; i++) s += PUSH_CHARS.charAt(rnd[i] % 64);
+    return s;
+  }
+  function pause(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+  function appendLog(c, tries) {                                               // いまの件数（n）を読んで、記録と n+1 を、1回で書く（荒らしで記録が増えすぎないよう、ルールが件数を数える）
+    return fetch(DBURL + "/n.json?t=" + Date.now(), { cache: "no-store" }).then(function (r) {
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json();
+    }).then(function (n) {
+      n = typeof n === "number" ? n : 0;
+      var key = newKey(), body = { n: n + 1 };
+      body["log/" + key] = { c: c, t: { ".sv": "timestamp" } };
+      return fetch(DBURL + ".json", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(function (r) {
+        if (r.ok) return { name: key };
+        if ((r.status === 401 || r.status === 403) && tries < 4) return pause(150 + Math.random() * 350).then(function () { return appendLog(c, tries + 1); });      // ほかの人と同時だった：やり直す
+        throw new Error(String(r.status));
+      });
+    });
+  }
+  var WQ = Promise.resolve();                                                  // 書き込みは、1件ずつ順番に（自分の中で、件数が食い違わないように）
   function postEvent(ev) {
-    return seal(ev).then(function (c) {
-      return fetch(DBURL + "/log.json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ c: c, t: { ".sv": "timestamp" } }) });
-    }).then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json().catch(function () { return null; }); });
+    var p = WQ.then(function () { return seal(ev); }).then(function (c) { return appendLog(c, 0); });
+    WQ = p.catch(function () { /* 次の書き込みは、続ける */ });
+    return p;
   }
   function sendEvent(ev) {
     ev.i = uid(); ev.cid = CID; ev.n = who(); ev.d = guessDevice(); ev.ts = Date.now();
@@ -367,6 +553,7 @@
     PENDING = PENDING.filter(function (ev) { return !SEEN_EVENTS[ev.i]; });
     PENDING.forEach(function (ev) { if (ev.k === "e") applyOps(ev.o); });
     if (RAWMETA) { if (!metaChanged() && META) fill(); }
+    applyTheme();
     renderNewIds();
     var busyHist = document.activeElement && $("hist").contains(document.activeElement) && document.activeElement !== $("hist");
     if (!$("hist").hidden && !busyHist && histSig() !== HSIG) renderHist();      // 記録が増えたときだけ、作り直す（操作中は、作り直さない）
@@ -374,13 +561,13 @@
   function showWiped() {
     $("hist").hidden = true;
     gate(function (c) {
-      brand(c, "このボードのデータは、削除されました");
+      brand(c, "このボードのデータは削除されました");
       var w = el("div", "warn");
       w.appendChild(el("div", "", "🗑 削除した人：" + (WIPED.n || "?") + "（ID " + String(WIPED.cid || "").slice(0, 6) + "）　" + fmtTime(WIPED.t)));
-      w.appendChild(el("div", "", "削除されたデータは、このページには、二度と表示されません。復活できません。サーバーの暗号化されたデータも、運営のBOTが、削除します。"));
+      w.appendChild(el("div", "", "削除されたデータはこのLABには二度と表示されません。復活できません。サーバーの暗号化されたデータも自動で削除されます。"));
       w.appendChild(el("div", "", (RAWMETA && RAWMETA.mode === "free")
-        ? "次回からは、新しい作戦ボードを作って、ご利用ください。"
-        : "次回からは、新しいURLを作り直して、ご利用ください（チーム専用チャンネルの「🔄 URLを作り直す」。リーダーか管理者が押せます）。"));
+        ? "次回からは新しい作戦ボードを作って、ご利用ください。"
+        : "次回からは新しいURLを作り直して、ご利用ください（チーム専用チャンネルの「🔄 URLを作り直す」。リーダーか管理者が押せます）。"));
       c.appendChild(w);
       if (RAWMETA && RAWMETA.mode === "free") {
         var nb = el("button", "go", "新しい作戦ボードを作る"); nb.type = "button";
@@ -417,33 +604,32 @@
 
   function showSetup(metaTeam, withUrl) {
     gate(function (c) {
-      brand(c, (metaTeam || "") + "｜はじめに、パスワードを決めてください");
+      brand(c, (metaTeam || "") + "｜はじめにパスワードを決めてください");
       if (withUrl) {                                                                // このURLが、このボードの、ただ1つの入り口
         var u = el("div", "warn"), pu = el("div"); pu.textContent = "このボードのURL（流出厳禁！）：";
         var inp0 = el("input"); inp0.type = "text"; inp0.readOnly = true; inp0.value = location.href; inp0.style.cssText = "width:100%;margin:6px 0;font-size:12px;background:#000;color:#fff;border:1px solid #888;border-radius:6px;padding:6px";
         var cp = el("button", "btn", "URLをコピー"); cp.type = "button";
         cp.addEventListener("click", function () { inp0.select(); try { document.execCommand("copy"); cp.textContent = "コピーしました"; } catch (e) { /* 無視 */ } });
         u.appendChild(pu); u.appendChild(inp0); u.appendChild(cp);
-        u.appendChild(el("div", "", "URLは、このラボに入るただ1つの扉です。大切に保存してください。"));
+        u.appendChild(el("div", "", "URLはこのラボに入るただ1つの扉です。大切に保存してください。"));
         u.appendChild(el("div", "", "URLをなくすと同じラボには入れなくなり、新しいラボを作り直すことになります。"));
         c.appendChild(u);
       }
-      var w = el("div", "warn");
+      var w = el("div", "welcome");                                                  // 赤くしない（白い文字）
       w.appendChild(el("b", "", "パスワードを決めてください。"));
       ["パスワードはあとから変えられません。URLと同様、大切に保存してください。",
-       "URLとパスワードは、チームの外の人に決して教えないでください。作戦が流出してしまいます。",
-       "作戦の中身は、パスワードで暗号化されます（パスワード自体は、どこにも送られません）。"]
+       "URLとパスワードはチームの外の人に決して教えないでください。作戦が流出してしまいます。",
+       "作戦の中身はパスワードで暗号化されます（パスワード自体はどこにも送られません）。"]
         .forEach(function (x) { w.appendChild(el("div", "", "・" + x)); });
       c.appendChild(w);
       var p1 = field(c, "パスワード（英大文字・小文字・数字をすべて使って10〜20文字、記号や空白は利用できません）");
       var p2 = field(c, "パスワード確認（同じパスワードを入力してください）");
-      c.appendChild(el("div", "rules", "使える文字：半角の英大文字・英小文字・数字だけ。記号・空白は使えません。"));
       var m = msgBox(c);
       var go = el("button", "go", "パスワードを決めて、はじめる"); go.type = "button"; c.appendChild(go);
       go.addEventListener("click", function () {
         var a = p1.value, b = p2.value;
-        if (!PW_RULE.test(a)) { m.textContent = "パスワードは、英大文字・英小文字・数字を、すべて使った、10〜20文字の英数字にしてください。"; return; }
-        if (a !== b) { m.textContent = "2つのパスワードが、同じではありません。"; return; }
+        if (!PW_RULE.test(a)) { m.textContent = "パスワードは英大文字・英小文字・数字をすべて使った、10〜20文字の英数字にしてください。"; return; }
+        if (a !== b) { m.textContent = "2つのパスワードが同じではありません。"; return; }
         go.disabled = true; m.textContent = "鍵を作っています…（数秒かかります）";
         var salt = b64(rand(16)), iter = 600000, chk = null, dhv = null;
         deriveKey(a, salt, iter).then(function (key) {
@@ -458,7 +644,7 @@
         }).then(function (r) {
           if (r.ok) { SETUP = { salt: salt, iter: iter, check: chk, dh: dhv }; unlock(false); return; }
           KEY = null; go.disabled = false;
-          m.textContent = r.status === 401 || r.status === 403 ? "すでに、ほかの人がパスワードを決めています。このページを開き直して、そのパスワードでログインしてください。" : "保存できませんでした（" + r.status + "）。";
+          m.textContent = r.status === 401 || r.status === 403 ? "すでにほかの人がパスワードを決めています。このLABを開き直して、そのパスワードでログインしてください。" : "保存できませんでした（" + r.status + "）。";
         }).catch(function () { KEY = null; go.disabled = false; m.textContent = "つながりませんでした。通信を確認して、もう一度お試しください。"; });
       });
     });
@@ -471,10 +657,10 @@
       var p1 = field(c, "パスワード");
       var m = msgBox(c);
       var opt = el("label", "opt"), cb = el("input"); cb.type = "checkbox";
-      opt.appendChild(cb); opt.appendChild(document.createTextNode("この端末にログインを保存する（自分だけが使う端末だけ。共有のPCでは、チェックしないでください）"));
+      opt.appendChild(cb); opt.appendChild(document.createTextNode("この端末にログインを保存する（自分だけが使う端末だけ。共有のPCではチェックしないでください）"));
       c.appendChild(opt);
       var go = el("button", "go", "ログイン"); go.type = "button"; c.appendChild(go);
-      c.appendChild(el("div", "rules", "パスワードを忘れたり、URLをなくしたときは、取り戻せません。新しいページを作り直してください（BOTの案内を見てください）。"));
+      c.appendChild(el("div", "rules", "パスワードを忘れたり、URLをなくしたときは取り戻せません。新しいLABを作り直してください。"));
       function attempt() {
         if (!p1.value) return;
         go.disabled = true; m.textContent = "確認しています…（数秒かかります）";
@@ -509,15 +695,15 @@
     gate(function (c) {
       brand(c, "あなたの名前を決めてください");
       var w = el("div", "warn");
-      ["履歴には、「あなたの名前＋ランダムな英数字6文字」（例：" + "たろう#" + TAG + "）が出ます。",
-       "6文字は、この端末だけのものです。同じ名前の人が、別の端末で開いても、6文字は変わります。ブラウザのデータを消すと、新しい6文字になります。",
-       "訪問や編集の履歴は、チームの全員が見られます。"]
+      ["履歴には「あなたの名前＋ランダムな英数字6文字」（例：" + "たろう#" + TAG + "）が出ます。",
+       "6文字はこの端末だけのものです。同じ名前の人が別の端末で開いても6文字は変わります。ブラウザのデータを消すと新しい6文字になります。",
+       "訪問や編集の履歴はチームの全員が見られます。"]
         .forEach(function (x) { w.appendChild(el("div", "", "・" + x)); });
       c.appendChild(w);
       var nm = field(c, "名前（12文字まで）", "text"); nm.maxLength = 12; nm.value = lastName();
       var m = msgBox(c);
-      var go = el("button", "go", "この名前で、はじめる"); go.type = "button"; c.appendChild(go);
-      var st = el("div", "rules", "名前や端末の番号は、この端末のブラウザの保存領域に保存されます（くわしくは、最初の「同意」の画面に書いてあります）。");
+      var go = el("button", "go", "この名前ではじめる"); go.type = "button"; c.appendChild(go);
+      var st = el("div", "rules", "名前や端末の番号はこの端末のブラウザの保存領域に保存されます（くわしくは最初の「同意」の画面に書いてあります）。");
       c.appendChild(st);
       function ok() {
         var v = cleanName(nm.value);
@@ -546,13 +732,13 @@
     gate(function (c) {
       brand(c, "チームだけで使う、試合前の作戦ボード");
       var w = el("div", "warn");                                                      // ここだけ赤
-      w.textContent = "※大会の番人BOT（Discord）をご利用の方は、チーム専用チャンネルにピン留めされたIDV TEAM LABのリンクから開いてください。";
+      w.textContent = "※大会の番人BOT（Discord）をご利用の方はチーム専用チャンネルにピン留めされたIDV TEAM LABのリンクから開いてください。";
       c.appendChild(w);
       var hi = el("div", "welcome");                                                  // 以下は、白い文字
       hi.appendChild(el("b", "", "IDV TEAM LABへようこそ！"));
       hi.appendChild(el("div", "", "ここはあなた方チームの秘密のラボです。"));
       var ol = el("div", "steps");
-      ["新しい作戦ボードを作るを押すと、あなたのチームだけのURLが生成されます。",
+      ["新しい作戦ボードを作るを押すとあなたのチームだけのURLが生成されます。",
        "パスワードを設定し、URLとパスワードをチームメンバーに共有してください。",
        "URLとパスワードは大切に保存し、決してチームの外に流出させないでください。",
        "URLをなくすとそのボードには入れなくなります。"]
@@ -565,27 +751,34 @@
       go.addEventListener("click", function () {
         var team = nm.value.trim();
         if (!team) { m.textContent = "チームの名前を入れてください。"; return; }
-        if (!window.crypto || !crypto.subtle) { m.textContent = "このブラウザでは、暗号が使えません（https:// のURLで、新しいブラウザで開いてください）。"; return; }
+        if (!window.crypto || !crypto.subtle) { m.textContent = "このブラウザでは暗号が使えません（https:// のURLで新しいブラウザで開いてください）。"; return; }
+        var wait = makeWait();                                                      // 続けて作れないようにする（荒らし対策）
+        if (wait > 0) { m.textContent = "続けてボードを作ることはできません。あと" + Math.ceil(wait / 60000) + "分ほどお待ちください。"; return; }
         go.disabled = true; m.textContent = "作っています…";
         var id = randomId();
-        fetch(DBURLFor(id) + "/meta.json", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ mode: "free", team: team, v: 1, t: { ".sv": "timestamp" } }) }).then(function (r) {
-          if (!r.ok) { go.disabled = false; m.textContent = r.status === 401 || r.status === 403 ? "作れませんでした（Firebaseのルールの設定が違います）。" : "作れませんでした（" + r.status + "）。"; return; }
-          useId(id); location.hash = id; boot();
+        var body = { "lab_rate/make": { ".sv": "timestamp" } };
+        body["lab/" + id + "/meta"] = { mode: "free", team: team, v: 1, t: { ".sv": "timestamp" } };
+        fetch((window.LAB_DB_URL || "").replace(/\/+$/, "") + "/.json", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).then(function (r) {
+          if (!r.ok) { go.disabled = false; m.textContent = r.status === 401 || r.status === 403 ? "いま、ほかのボードが作られています。1分ほどあけて、もう一度お試しください。" : "作れませんでした（" + r.status + "）。"; return; }
+          markMade(); useId(id); location.hash = id; boot();
         }).catch(function () { go.disabled = false; m.textContent = "つながりませんでした。通信を確認して、もう一度お試しください。"; });
       });
     });
   }
+  var MAKE_KEY = "lab_made_at", MAKE_GAP = 10 * 60 * 1000;                    // 同じ端末では、10分に1つまで
+  function makeWait() { try { var at = parseInt(localStorage.getItem(MAKE_KEY) || "0", 10) || 0; return Math.max(0, at + MAKE_GAP - Date.now()); } catch (e) { return 0; } }
+  function markMade() { try { localStorage.setItem(MAKE_KEY, String(Date.now())); } catch (e) { /* 無視 */ } }
   function DBURLFor(id) { return (window.LAB_DB_URL || "").replace(/\/+$/, "") + "/lab/" + id; }
   function boot() {
     if (!ID) { showLanding(); return; }
-    if (!/^[A-Za-z0-9]{24,40}$/.test(ID)) { gateError("このページのURLが正しくありません。チーム専用チャンネルにピン留めされた、IDV TEAM LABのリンクから開いてください。"); return; }
-    if (!window.crypto || !crypto.subtle) { gateError("このブラウザ、または、この接続では、暗号を使えません（https:// のURLで、新しいブラウザで開いてください）。"); return; }
+    if (!/^[A-Za-z0-9]{24,40}$/.test(ID)) { gateError("このLABのURLが正しくありません。チーム専用チャンネルにピン留めされた、IDV TEAM LABのリンクから開いてください。"); return; }
+    if (!window.crypto || !crypto.subtle) { gateError("このブラウザ、またはこの接続では暗号を使えません（https:// のURLで新しいブラウザで開いてください）。"); return; }
     Promise.all([getRaw("setup"), getRaw("meta/team")]).then(function (r) {
       var setup = r[0], team = r[1];
       if (setup.status === 401 || setup.status === 403) { gateError(DENIED); return; }
       if (!setup.ok || !team.ok) { gateError("つながりませんでした。通信を確認して、開き直してください。"); return; }
-      if (!window.LAB_DB_URL) { gateError("このページの設定が、足りません（Firebaseの場所）。"); return; }
-      if (team.data == null) { gateError("このURLのチームの場所が、見つかりません。URLが間違っているか、BOTがまだ用意していません。"); return; }
+      if (!window.LAB_DB_URL) { gateError("このLABの設定が足りません（Firebaseの場所）。"); return; }
+      if (team.data == null) { gateError("このURLのチームの場所が見つかりません。URLが間違っているか、まだ用意されていません。"); return; }
       if (setup.data == null) { showSetup(String(team.data), true); return; }
       tryStoredKey(setup.data).then(function (ok) { if (ok) unlock(); else showLogin(setup.data, String(team.data)); });
     }).catch(function () { gateError("つながりませんでした。通信を確認して、開き直してください。"); });
@@ -643,6 +836,7 @@
     var p = path.split("/"), add = val !== null && val !== undefined;
     function ch(id) { return CH[id] ? CH[id].n : "キャラ" + id; }
     if (p[0] === "rules") return "ルール設定を変えた";
+    if (p[0] === "theme") return "デザインを変えた";
     if (p[0] === "fav") { var pl = PLAYERS.filter(function (x) { return String(x.id) === p[1]; })[0]; return "常用キャラ：" + (pl ? pl.n : "選手") + (add ? " に " : " から ") + ch(p[2]) + (add ? " を入れた" : " を外した"); }
     if (p[0] === "sets") {
       var sid = (p[1] || "").split("_"), r = (META && META.rounds || []).filter(function (x) { return String(x.no) === sid[0]; })[0];
@@ -653,7 +847,7 @@
     return path;
   }
   function describeEvent(h) {
-    if (h.k === "v") return "ページを開いた";
+    if (h.k === "v") return "LABを開いた";
     if (h.k === "wipe") return "データを削除した";
     if (h.k !== "e") return "?";
     var ops = h.ev.o || {}, keys = Object.keys(ops);
@@ -666,7 +860,7 @@
     HSIG = histSig();
     var c = $("histCard"); c.textContent = "";
     c.appendChild(el("h2", "", "🕘 履歴・端末"));
-    c.appendChild(el("div", "note", "このページのURLとパスワードは、大切に保存してください。決して、チームの外の人に教えないでください（流出すると、作戦が盗まれます）。URLをなくしたときは、新しいページを作り直すことになります。パスワードは、変えられません。"));
+    c.appendChild(el("div", "note", "このLABのURLとパスワードは大切に保存してください。決して、チームの外の人に教えないでください（流出すると作戦が盗まれます）。URLをなくしたときは新しいLABを作り直すことになります。パスワードは変えられません。"));
     var row = el("div", "row"); row.appendChild(document.createTextNode("あなたの名前："));
     var inp = el("input"); inp.value = NAME; inp.maxLength = 12; row.appendChild(inp);
     var sv = el("button", "btn", "保存"); sv.type = "button";
@@ -683,7 +877,7 @@
       d.n = h.n || d.n; d.d = (h.ev && h.ev.d) || d.d; if (h.t < d.first) d.first = h.t; if (h.t > d.last) d.last = h.t;
       if (h.k === "v") d.visits++; else d.edits++;
     });
-    c.appendChild(el("h3", "", "このページを開いた端末（ID）"));
+    c.appendChild(el("h3", "", "このLABを開いた端末（ID）"));
     var t1 = el("table"), hd = el("tr"); ["名前", "ID", "はじめて", "さいごに", "訪問", "編集"].forEach(function (x) { hd.appendChild(el("th", "", x)); }); t1.appendChild(hd);
     Object.keys(devs).sort(function (a, b) { return devs[a].first - devs[b].first; }).forEach(function (k) {
       var d = devs[k], tr = el("tr");
@@ -701,10 +895,10 @@
       t2.appendChild(tr);
     });
     c.appendChild(t2);
-    if (HIST.length > 300) c.appendChild(el("div", "hint", "古い記録は、省略しています（全部、Firebaseに残っています）。"));
+    if (HIST.length > 300) c.appendChild(el("div", "hint", "古い記録は省略しています（全部、Firebaseに残っています）。"));
     // データの削除（パスワードが要る）
     var dz = el("div", "danger"); dz.appendChild(el("h3", "", "🗑 データの削除"));
-    dz.appendChild(el("div", "", "パスワードを入力すると、このボードのデータ（作戦・履歴）を、すべて削除できます。削除すると、このページには、二度と表示されず、サーバーの暗号化されたデータも、運営のBOTが、消します（BOTが動いているとき、1分ほどで消えます）。そのあとは、パスワードを入力しても、「だれが削除したか」だけが表示されます。チームの名前など、暗号化されていない情報は、消えません。削除したあとは、新しいURLを作り直してご利用ください。"));
+    dz.appendChild(el("div", "", "パスワードを入力するとこのボードのデータ（作戦・履歴）をすべて削除できます。削除するとこのLABには二度と表示されず、サーバーの暗号化されたデータも自動で消されます（1分ほどで消えます）。そのあとはパスワードを入力しても「だれが削除したか」だけが表示されます。チームの名前など、暗号化されていない情報は消えません。削除したあとは新しいURLを作り直してご利用ください。"));
     var dpw = field(dz, "パスワード");
     var del = el("button", "del", "データを削除する"); del.type = "button"; dz.appendChild(del);
     var dmsg = el("div", "dmsg"); dz.appendChild(dmsg);
@@ -714,7 +908,7 @@
       var dkey = null;
       deriveKey(dpw.value, SETUP.salt, SETUP.iter).then(function (key) { dkey = key; return unseal(SETUP.check, key); }).then(function (o) {
         if (!o || o.chk !== "IDV-TEAM-LAB") { del.disabled = false; dmsg.textContent = "パスワードが違います。"; return undefined; }
-        if (!window.confirm("このボードのデータを、すべて削除します。元に戻せません。本当に、削除しますか？")) { del.disabled = false; dmsg.textContent = ""; return undefined; }
+        if (!window.confirm("このボードのデータをすべて削除します。元に戻せません。本当に削除しますか？")) { del.disabled = false; dmsg.textContent = ""; return undefined; }
         dmsg.textContent = "削除しています…";
         var ROOT = (window.LAB_DB_URL || "").replace(/\/+$/, ""), jsonH = { "Content-Type": "application/json" };
         return postEvent({ k: "wipe", i: uid(), cid: CID, n: who(), d: guessDevice(), ts: Date.now() }).then(function (res) {
@@ -727,12 +921,66 @@
             return fetch(ROOT + "/lab_wipe/" + ID + ".json", { method: "PUT", headers: jsonH, body: JSON.stringify({ t: { ".sv": "timestamp" } }) });
           }).then(function (r) { if (!r.ok) throw new Error(String(r.status)); return "ok"; });
         }).then(function (st) {
-          dmsg.textContent = st === "old" ? "削除しました（このボードは古い形式のため、サーバーの暗号化されたデータは、残ります）。" : "削除しました。サーバーの暗号化されたデータも、運営のBOTが、まもなく（1分ほどで）削除します。";
+          dmsg.textContent = st === "old" ? "削除しました（このボードは古い形式のため、サーバーの暗号化されたデータは残ります）。" : "削除しました。サーバーの暗号化されたデータも自動でまもなく（1分ほどで）削除されます。";
         }, function () { del.disabled = false; dmsg.textContent = "削除できませんでした（通信を確認して、もう一度）。"; });
       }).catch(function () { del.disabled = false; dmsg.textContent = "確認できませんでした。"; });
     });
     c.appendChild(dz);
   }
+  // ───────── デザイン（色3つ・スタイル5種類）。このLABの全員に、同じものが反映される（STATE.theme に入る） ─────────
+  var STYLES = [["cyber", "サイバー", "ネオン・格子"], ["cute", "キュート", "白とピンク・ふわふわ"], ["gothic", "ゴシック", "明朝・ろうそく"], ["rock", "ロック", "斜め・ひっかき"], ["simple", "シンプル", "すっきり"]];
+  var THEME_DEF = { bg: "#05070b", fg: "#f2f6ff", ac: "#22d3ee", st: "cyber" };
+  var STYLE_DEF = { cute: { bg: "#fff5f9", fg: "#6b3550", ac: "#f55fa8" } };                 // キュートは、白とピンクが初期の色
+  function hexOk(v) { return typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v); }
+  function themeNow() {
+    var t = STATE && typeof STATE.theme === "object" && STATE.theme ? STATE.theme : {};
+    var bot = RAWMETA && hexOk(RAWMETA.color) ? RAWMETA.color : null;                       // 大会BOTのチームなら、チームカラーが、サブカラーの最初の色
+    var ids = STYLES.map(function (x) { return x[0]; });
+    var st = ids.indexOf(t.st) >= 0 ? t.st : THEME_DEF.st, d = STYLE_DEF[st] || {};          // 色は、自分で決めた色 → （サブカラーだけ）BOTのチームカラー → スタイルの初期の色
+    return { bg: hexOk(t.bg) ? t.bg : (d.bg || THEME_DEF.bg), fg: hexOk(t.fg) ? t.fg : (d.fg || THEME_DEF.fg), ac: hexOk(t.ac) ? t.ac : (bot || d.ac || THEME_DEF.ac), st: st };
+  }
+  function lum(hex) { var n = parseInt(hex.slice(1), 16), c = [n >> 16 & 255, n >> 8 & 255, n & 255].map(function (v) { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * c[0] + .7152 * c[1] + .0722 * c[2]; }
+  var THEME_SIG = "";
+  function applyTheme(over) {                                                                // 色とスタイルを、画面に反映する（変わったときだけ）
+    var t = over || themeNow(), sig = t.bg + t.fg + t.ac + t.st;
+    if (!over && sig === THEME_SIG) return;
+    THEME_SIG = over ? "" : sig;
+    var r = document.documentElement;
+    r.style.setProperty("--bg0", t.bg); r.style.setProperty("--fg0", t.fg); r.style.setProperty("--ac", t.ac);
+    r.style.setProperty("--ac-on", lum(t.ac) > .5 ? "#05070b" : "#ffffff");
+    r.setAttribute("data-style", t.st);
+    r.setAttribute("data-tone", lum(t.bg) > .5 ? "light" : "dark");
+  }
+  function openTheme() { renderTheme(); $("theme").hidden = false; }
+  function setTheme(ops) { writeQuiet(ops); applyTheme(); renderTheme(); }
+  function renderTheme() {
+    var c = $("themeCard"), t = themeNow(); c.textContent = "";
+    c.appendChild(el("h2", "", "🎨 デザイン"));
+    c.appendChild(el("div", "tnote", "この設定は、このLABの全員に反映されます。だれか一人が変えると、全員の色とスタイルが変わります。ハンターの赤・サバイバーの青は固定です。"));
+    c.appendChild(el("h3", "", "色"));
+    [["メインカラー（背景）", "bg"], ["文字の色", "fg"], ["サブカラー（アクセント）", "ac"]].forEach(function (x) {
+      var row = el("div", "trow"), inp = el("input"), hx = el("span", "thx", t[x[1]]);
+      inp.type = "color"; inp.value = t[x[1]];
+      inp.addEventListener("input", function () { var o = themeNow(); o[x[1]] = inp.value; hx.textContent = inp.value; applyTheme(o); });            // 選んでいる間は、この画面だけで試す
+      inp.addEventListener("change", function () { var ops = {}; ops["theme/" + x[1]] = inp.value; setTheme(ops); });                                    // 決めたら、全員に反映する
+      row.appendChild(el("span", "tl", x[0])); row.appendChild(hx); row.appendChild(inp); c.appendChild(row);
+    });
+    c.appendChild(el("h3", "", "スタイル"));
+    var box = el("div", "styles");
+    STYLES.forEach(function (s) {
+      var b = el("button", s[0] === t.st ? "on" : "", s[1]); b.type = "button"; b.appendChild(el("small", "", s[2]));
+      b.addEventListener("click", function () { var ops = {}; ops["theme/st"] = s[0]; setTheme(ops); });
+      box.appendChild(b);
+    });
+    c.appendChild(box);
+    var rw = el("div", "trow2");
+    var rs = el("button", "btn", "初期の色とスタイルに戻す"); rs.type = "button";
+    rs.addEventListener("click", function () { setTheme({ "theme/bg": null, "theme/fg": null, "theme/ac": null, "theme/st": null }); });
+    var cl = el("button", "btn", "閉じる"); cl.type = "button"; cl.style.marginLeft = "auto";
+    cl.addEventListener("click", function () { applyTheme(); $("theme").hidden = true; });
+    rw.appendChild(rs); rw.appendChild(cl); c.appendChild(rw);
+  }
+  $("themeBtn").addEventListener("click", openTheme);
   $("histBtn").addEventListener("click", openHist);
 
   // ───────── 現在のラウンド・セット ─────────
@@ -864,15 +1112,15 @@
     if (target.classList.contains("off")) return;
     var parts = spec.split(":");
     if (parts[0] === "gbx") {                                                        // GLOBAL BAN（手動で、足す）
-      if (ch.f !== parts[1]) { flash("この枠には、" + (parts[1] === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。"); return; }
+      if (ch.f !== parts[1]) { flash("この枠には" + (parts[1] === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。"); return; }
       var gp = dropPath(spec) + "/" + ch.id;
       var go1 = {}; go1[gp] = 1; if (old) go1[old] = null;
       sel = null; write(go1); return;
     }
     if (parts[0] === "set" && ch.f !== blockFaction(parts[1], parts[2])) {
-      flash(parts[2] === "ban" ? (parts[1] === "s" ? "サバイバー目線のBANには、ハンターのキャラを入れます（サバイバー側がハンターをBANします）。"
-                                                     : "ハンター目線のBANには、サバイバーのキャラを入れます（ハンター側がサバイバーをBANします）。")
-                              : (parts[1] === "s" ? "サバイバー目線のPICKには、サバイバーのキャラを入れます。" : "ハンター目線のPICKには、ハンターのキャラを入れます。"));
+      flash(parts[2] === "ban" ? (parts[1] === "s" ? "サバイバー目線のBANにはハンターのキャラを入れます。"
+                                                     : "ハンター目線のBANにはサバイバーのキャラを入れます。")
+                              : (parts[1] === "s" ? "サバイバー目線のPICKにはサバイバーのキャラを入れます。" : "ハンター目線のPICKにはハンターのキャラを入れます。"));
       return;
     }
     var path = dropPath(spec);
@@ -915,7 +1163,7 @@
     var q = el("input"); q.type = "search"; q.placeholder = "キャラを探す"; q.value = palFilter;
     q.addEventListener("input", function () { palFilter = q.value; fillPalette(); });
     pal.appendChild(q);
-    pal.appendChild(el("div", "hint", "名札を右の枠へドラッグ（スマホは、長押ししてから動かす／タップして選び、置きたい枠をタップ）。外すときは、ここへ戻すか ×。"));
+    pal.appendChild(el("div", "hint", "名札を右の枠へドラッグ（スマホは長押ししてから動かす／タップして選び、置きたい枠をタップ）。外すときはここへ戻すか ×。"));
     pal.appendChild(el("h3", "", "ハンター"));
     var bh = el("div", "palbox h"), gh = el("div", "grid"); gh.id = "palH"; bh.appendChild(gh); pal.appendChild(bh);
     var hs = el("div"); hs.style.cssText = "display:flex;align-items:center;gap:10px;flex:none";
@@ -1058,7 +1306,7 @@
     if (!FREE) {                                                                       // 大会BOTのチーム：BOTのルールが、自動で入っている
       var sec = el("div", "sec");
       sec.appendChild(el("h4", "", "📐 ルール設定"));
-      sec.appendChild(el("div", "hint", "大会BOTのルールが、自動で入っています（ここでは変えられません）。名札は、各セットのタブで入れます。"));
+      sec.appendChild(el("div", "hint", "ルールは自動で入っています（ここでは変えられません）。名札は各セットのタブで入れます。"));
       box.appendChild(sec);
       (META.rounds || []).forEach(function (r) {
         var s2 = el("div", "sec");
@@ -1068,8 +1316,8 @@
         (r.sets || []).forEach(function (s) {
           var tr = el("tr");
           tr.appendChild(el("td", "", s.label));
-          tr.appendChild(el("td", "", "BAN（ハンター）" + s.ban.h + "　PICK（サバイバー）" + s.pick.s));
-          tr.appendChild(el("td", "", "BAN（サバイバー）" + s.ban.s + "　PICK（ハンター）" + s.pick.h));
+          tr.appendChild(el("td", "", "ハンターBAN" + s.ban.h));
+          tr.appendChild(el("td", "", "サバイバーBAN" + s.ban.s));
           tr.appendChild(el("td", "", (s.gbOn.h || s.gbOn.s) ? "あり（前のセットで使ったキャラ）" : "なし"));
           tb.appendChild(tr);
         });
@@ -1088,7 +1336,7 @@
     var R = rules(), detail = !!R.detail, n = ruleNum(R.n, 3, 1, 8);
     var s1 = el("div", "sec");
     s1.appendChild(el("h4", "", "📐 ルール設定"));
-    s1.appendChild(el("div", "hint", "大会BOTを使っていないので、ルールは、ここで入れてください。入れたルールで、各ラウンド・各セットの枠が作られます。"));
+    s1.appendChild(el("div", "hint", "ルールはここで入れてください。入れたルールで各ラウンド・各セットの枠が作られます。"));
     box.appendChild(s1);
     var s2 = el("div", "sec");
     s2.appendChild(el("h4", "", "選手の名前（常用キャラのタブに並びます）"));
@@ -1107,10 +1355,10 @@
     var s3 = el("div", "sec");
     s3.appendChild(el("h4", "", "ラウンド・BAN・グローバルBAN"));
     var row = el("div"); row.appendChild(document.createTextNode("ラウンド数：")); row.appendChild(numSel("rules/n", 3, 1, 8)); s3.appendChild(row);
-    s3.appendChild(chk("rules/gb", true, "グローバルBANあり（前のセットで使ったキャラを、あとのセットで使えない。第2セット以降）"));
+    s3.appendChild(chk("rules/gb", true, "グローバルBANあり（前のセットで使ったキャラをあとのセットで使えない。第2セット以降）"));
     if (!detail) {
       var tb = el("table"), hd = el("tr");
-      ["", "サバイバーのBAN数（ハンターがサバイバーをBAN）", "ハンターのBAN数（サバイバーがハンターをBAN）"].forEach(function (x) { hd.appendChild(el("th", "", x)); }); tb.appendChild(hd);
+      ["", "サバイバーBAN", "ハンターBAN"].forEach(function (x) { hd.appendChild(el("th", "", x)); }); tb.appendChild(hd);
       for (var r = 1; r <= n; r++) {
         var tr = el("tr"); tr.appendChild(el("td", "", "ラウンド" + r));
         var a = el("td"); a.appendChild(numSel("rules/r/" + r + "/bs", 4, 0, 8)); tr.appendChild(a);
@@ -1121,23 +1369,23 @@
     }
     box.appendChild(s3);
     var s4 = el("div", "sec");
-    s4.appendChild(el("h4", "", "ローカルBAN（すべての試合で、絶対に使えないキャラ）"));
-    s4.appendChild(el("div", "hint", "名札を、ここへドラッグして入れてください。入れたキャラは、各セットのBANの枠に、自動で入ります（BANの人数には、数えません）。"));
+    s4.appendChild(el("h4", "", "ローカルBAN（すべての試合で絶対に使えないキャラ）"));
+    s4.appendChild(el("div", "hint", "名札をここへドラッグして入れてください。入れたキャラは各セットのBANの枠に自動で入ります（BANの人数には数えません）。"));
     var lbz = el("div", "drop"); lbz.id = "lbzone"; lbz.setAttribute("data-drop", "rule:lb"); lbz.setAttribute("data-hint", "ここに名札を入れる");
     lbz.addEventListener("click", function () { onDropClick("rule:lb", lbz); });
     s4.appendChild(lbz);
     box.appendChild(s4);
     var s5 = el("div", "sec");
-    s5.appendChild(chk("rules/detail", false, "セットごとに、くわしくルールを決める（この場合、GLOBAL BANの、自動の名札は、手で直せません）"));
+    s5.appendChild(chk("rules/detail", false, "セットごとにくわしくルールを決める（この場合、GLOBAL BANの自動の名札は手で直せません）"));
     if (detail) {
       for (var r2 = 1; r2 <= n; r2++) {
         s5.appendChild(el("h5", "", "ラウンド" + r2));
         var t2 = el("table"), h2 = el("tr");
-        ["", "サバイバーBAN数", "ハンターBAN数", "サバイバーPICK数", "ハンターPICK数", "GLOBAL BAN"].forEach(function (x) { h2.appendChild(el("th", "", x)); }); t2.appendChild(h2);
+        ["", "サバイバーBAN数", "ハンターBAN数", "GLOBAL BAN"].forEach(function (x) { h2.appendChild(el("th", "", x)); }); t2.appendChild(h2);
         SET_KEYS.forEach(function (k) {
           var tr2 = el("tr"), base = "rules/sets/" + r2 + "_" + k + "/";
           tr2.appendChild(el("td", "", SET_LABEL[k]));
-          [["bs", 4], ["bh", 1], ["ps", 4], ["ph", 1]].forEach(function (x) { var td = el("td"); td.appendChild(numSel(base + x[0], x[1], 0, 8)); tr2.appendChild(td); });
+          [["bs", 4], ["bh", 1]].forEach(function (x) { var td = el("td"); td.appendChild(numSel(base + x[0], x[1], 0, 8)); tr2.appendChild(td); });
           var tg = el("td"); tg.appendChild(chk(base + "g", k !== "1", "あり")); tr2.appendChild(tg);
           t2.appendChild(tr2);
         });
@@ -1172,7 +1420,7 @@
     if (cur.tab === "fav") {
       w.appendChild(el("div", "hint", "選手ごとの得意キャラです。名札を選手の枠に入れてください（同じ枠に同じキャラは入りません。選手が違えば、同じキャラでも入れられます）。"));
       var g = el("div", "players");
-      if (!PLAYERS.length) w.appendChild(el("div", "empty-msg", FREE ? "「ルール設定」のタブで、選手の名前を入れると、ここに並びます。" : "選手が登録されると、ここに並びます。"));
+      if (!PLAYERS.length) w.appendChild(el("div", "empty-msg", FREE ? "「ルール設定」のタブで選手の名前を入れるとここに並びます。" : "選手が登録されるとここに並びます。"));
       PLAYERS.forEach(function (p) {
         var b = el("div", "box");
         var h = el("h4", "", p.n); b.appendChild(h);
@@ -1186,8 +1434,8 @@
     var s = curSet();
     if (!s) { w.appendChild(el("div", "empty-msg", "このラウンドの情報がありません。")); return; }
     var r = curRound();
-    w.appendChild(el("div", "hint", r.name + "（" + r.fmt + "）／" + s.label + "　サバイバー目線：BAN（ハンター）" + s.ban.h + "・PICK（サバイバー）" + s.pick.s
-      + "　／　ハンター目線：BAN（サバイバー）" + s.ban.s + "・PICK（ハンター）" + s.pick.h + "。GLOBAL BANは、前のセットで使ったキャラが、自動で入ります。"));
+    w.appendChild(el("div", "hint", r.name + "（" + r.fmt + "）／" + s.label + "　サバイバー目線：ハンターBAN" + s.ban.h
+      + "　／　ハンター目線：サバイバーBAN" + s.ban.s + "。GLOBAL BANは前のセットで使ったキャラが自動で入ります。"));
     var cs = el("div"); cs.id = "corners";
     [["s", "サバイバー目線"], ["h", "ハンター目線"]].forEach(function (pair) {         // 中央がサバイバー目線、右がハンター目線
       var v = pair[0], c = el("div", "corner " + v); c.appendChild(el("h3", "", pair[1]));
@@ -1200,7 +1448,7 @@
         var d = el("div", "drop");
         d.id = "blk-" + v + "-" + b;
         if (b === "gb") {
-          d.setAttribute("data-hint", (s.gbOn || {})[v] ? "前のセットで使ったキャラが、ここに入ります" : "このセットはGLOBAL BANなし");
+          d.setAttribute("data-hint", (s.gbOn || {})[v] ? "前のセットで使ったキャラがここに入ります" : "このセットはGLOBAL BANなし");
           if (editableGb()) { d.setAttribute("data-drop", "gbx:" + v); d.addEventListener("click", (function (spec, node) { return function () { onDropClick(spec, node); }; })("gbx:" + v, d)); }
         }
         else {
@@ -1310,7 +1558,7 @@
     if (fresh.length) {                                                                // 知らない端末が、開きました
       var bar = el("div", "bar newid");
       bar.appendChild(el("span", "", "⚠ 知らない端末のアクセスがあります：" + fresh.slice(0, 4).map(function (h) { return (h.n || "?") + "（ID " + h.cid.slice(0, 6) + "）" + fmtTime(h.t); }).join("、")
-        + (fresh.length > 4 ? " ほか" : "") + "。チームの人でなければ、すぐに、チームの管理者に知らせてください。"));
+        + (fresh.length > 4 ? " ほか" : "") + "。チームの人でなければ、すぐにチームの管理者に知らせてください。"));
       var ok = el("button", "", "確認した");
       ok.type = "button";
       ok.addEventListener("click", function () { var s = seenList(); fresh.forEach(function (h) { if (s.indexOf(h.cid) < 0) s.push(h.cid); }); saveSeen(s); showNotice(); });
@@ -1322,8 +1570,9 @@
 
   // ───────── 読み込み ─────────
   function onMeta(m) {
-    if (!m) { if (!META) setStatus("データを待っています…（BOTが準備すると表示されます）", ""); return; }
+    if (!m) { if (!META) setStatus("データを待っています…（準備ができると表示されます）", ""); return; }
     RAWMETA = m;
+    applyTheme();
     applyMeta();
     $("ttl").textContent = "🧪 IDV TEAM LAB｜" + (m.team || "");
     $("sub").textContent = m.tour || "";
@@ -1348,63 +1597,19 @@
   function hasConsent() { try { return localStorage.getItem(CONSENT_KEY) === "1"; } catch (e) { return sessionConsent; } }
   function giveConsent() { sessionConsent = true; try { localStorage.setItem(CONSENT_KEY, "1"); } catch (e) { /* 無視 */ } }
   var POLICY = [                                                              // 同意の画面の文章。「p」＝文章、「b」＝箇条書き、「l」＝リンク
-    ["1. IPアドレスと外部サービスとの通信", [
-      ["p", "Webページの表示や、データの送受信では、通信に必要な情報として、IPアドレスなどが、通信先に伝わります。このページが通信する先は、次の2つだけです（ブラウザの設定でも、これ以外への通信を止めています）。"],
-      ["b", "GitHub：このページと、キャラクターの画像の配信"],
-      ["b", "Firebase（Google）：パスワードの設定・ログイン・作戦データや履歴の保存と同期"],
-      ["p", "ページの表示のときはGitHubへ、ログインや保存・同期のときはFirebaseへ、通信します。IPアドレスなどは、各サービスに送られ、各サービスの方針に従って、処理・記録されることがあります。"],
-      ["p", "このページには、IPアドレスを取得・記録・利用する機能は、ありません。運営者のBOTも、このページとは通信しません（BOTがFirebaseに書くのは、チームの場所に置く、大会の情報だけです）。運営者が、各サービスの管理画面やログから、IPアドレスなどを見られるかどうかは、各サービスの仕様と、運営者の権限によります。"],
-      ["p", "通信先を、この2つに限っているのは、ブラウザの設定によるもので、通信先に渡る情報や、各社でのログの保存まで、制限するものではありません。各サービスでの情報の取り扱いは、各社のプライバシーポリシーをご確認ください。"],
-      ["l", [["GitHub", "https://docs.github.com/ja/site-policy/privacy-policies/github-general-privacy-statement"], ["Google", "https://policies.google.com/privacy?hl=ja"]]]]],
-    ["2. ブラウザ内に保存する情報", [
-      ["p", "このページは、Cookieを使いません。ブラウザの保存領域（localStorage）に、次の情報を保存します。どれも、この端末のブラウザを使える人だけが、見られます（サーバーには、送りません。ただし、名前・端末の番号・6文字は、操作のたびに、履歴の一部として、暗号化して送ります）。"],
-      ["b", "端末識別用のランダムな番号と、ランダムな英数字6文字（目的：履歴で、どの端末の操作かを区別するため）"],
-      ["b", "名前（目的：履歴や画面で、利用者を区別するため）"],
-      ["b", "同意の記録（目的：次回から、この画面を省くため）"],
-      ["b", "確認済みの端末の記録（目的：「知らない端末のお知らせ」で、確認した端末を覚えるため）"],
-      ["b", "表示の設定：キャラクターの、職業ごとの並び替え（目的：次回も、同じ表示にするため）"],
-      ["b", "ログイン情報（目的：次回から、パスワードの入力を省くため。「この端末にログインを保存する」を選んだときだけ保存します）。保存されるのは、パスワードそのものではなく、作戦を暗号化・復号するための鍵です。この端末のブラウザの保存データを見られる人は、パスワードなしで、このボードを開けます。共有のパソコンでは、選ばないでください。"],
-      ["b", "開いていたタブ（目的：再読み込みしても、同じ画面に戻るため）：ブラウザのセッションの保存領域に置き、ブラウザを閉じると、消えます。"],
-      ["p", "ブラウザの保存データを消すと、これらは失われ、名前の再設定と、再ログインが必要になります。このとき、新しい端末として、履歴に記録され、ほかのメンバーの画面には、「知らない端末」のお知らせが出ます。サーバーに保存された情報は、消えません。"],
-      ["p", "広告の配信や、アクセス解析のためのサービスは、使っていません。"]]],
-    ["3. サーバー（Firebase）に保存する情報", [
-      ["p", "次の情報を、サーバーに保存します。「URLを知る人」は、パスワードを知らなくても、読める人です。「運営者」は、Firebaseの管理画面や、管理用の権限で、読める人です。Google社も、サーバーを運営する立場で、取得できます。"],
-      ["b", "作戦の内容と履歴の内容（BAN・PICK・メモ・ルールの設定・操作の内容・名前と6文字・端末の番号・端末の種類）：パスワードから作った鍵で、ブラウザの中で暗号化してから、保存します（鍵の作り方：PBKDF2-SHA256・60万回、暗号：AES-256-GCM）。読めるのは、パスワードを知っているチームのメンバーだけです。暗号化されたままのデータは、URLを知る人、運営者、Google社も、取得できますが、読めません。"],
-      ["b", "履歴の件数と時刻（暗号化されません）：URLを知る人、運営者、Google社が、見られます。"],
-      ["b", "パスワード確認用のデータ（暗号化されません）：ランダムな値・計算の回数・確認用の暗号文・削除用の照合の値。URLを知る人、運営者、Google社が、見られます。これを使って、パスワードの推測を試せるので、推測されにくいパスワードにしてください。"],
-      ["b", "チームの情報（暗号化されません）：チームの名前。大会BOTのチームでは、さらに、選手名・ルール・キャラクターの設定。URLを知る人、運営者、Google社が、パスワードなしで、読めます。URLは、パスワードと同じように、秘密にしてください。"],
-      ["b", "削除の依頼（削除を押したときだけ、一時的に）：削除用の値と時刻。BOTが処理したあと、消します。"],
-      ["p", "パスワードそのものは、サーバーに、送信も保存もしません。鍵は、ブラウザの中だけで使い、上の「ログインを保存」を選んだときだけ、この端末に保存します。"],
-      ["p", "パスワードを忘れると、作戦データを読めなくなります。運営者も、パスワードを知らないので、再発行や、データの復元は、できません。パスワードは、大切に管理してください。"],
-      ["p", "暗号化は、端末のウイルス感染や、ページのコードの改ざんなど、あらゆる危険を防ぐものではありません。また、通信先を限る設定は、通信先を限るだけで、通信先に渡る情報や、各社でのログの保存までは、制限できません。"]]],
-    ["4. 操作履歴について", [
-      ["p", "チーム内の操作を確認できるよう、訪問や編集の履歴を、保存します。履歴には、次の情報が含まれます。"],
-      ["b", "操作の時刻（サーバーの時刻）"],
-      ["b", "名前と、英数字6文字"],
-      ["b", "端末識別用の番号（画面には、先頭の6文字を表示）"],
-      ["b", "端末の種類（OSとブラウザの名前）"],
-      ["b", "操作の内容（どのキャラクターを入れた・外した、メモを書き換えた、など）"],
-      ["p", "時刻以外は、暗号化されており、パスワードを知っているチームのメンバー全員が、見られます。誰が操作したかを、確認するために使います。"]]],
-    ["5. データの削除と管理", [
-      ["p", "チームのパスワードを知っている人は、「🕘 履歴・端末」の一番下から、パスワードを入れて、そのボードのデータ（作戦と履歴）を、削除できます（確認の画面が出ます）。削除すると、このページには表示されなくなり、運営のBOTが、サーバーの暗号化されたデータも、削除します（BOTが動いているとき、1分ほどで消えます）。削除後は、パスワードを入れても、「だれが、いつ削除したか」だけが、表示されます。"],
-      ["p", "削除してもサーバーに残るのは、次のものです：チームの情報とパスワード確認用のデータ（3.を参照。URLを知る人、運営者、Google社が見られます）、削除の記録（暗号化。パスワードを知る人だけが読めます）。BOTが止まっているときは、サーバーの暗号化されたデータの削除が、BOTが動くまで、遅れます。Google社での、バックアップやログへの残り方は、各社の方針に従います。"],
-      ["p", "削除の依頼は、パスワードから作った値で、本物かどうかを、BOTが確かめます。パスワードを知らずに、URLだけを知っている人は、データの削除も、書き換えも、できません。"],
-      ["p", "パスワードは、チーム内で共有されるため、特定のメンバーだけが知っているとは限りません。信頼できる人にだけ、共有してください。"],
-      ["p", "ブラウザの保存データを消しても、サーバーのデータは、消えません。反対に、この削除機能を使っても、ブラウザの保存データ（名前や端末の番号など）は、消えません。"]]],
-    ["6. 同意について", [
-      ["p", "「同意して進む」を押すと、この説明を確認し、情報の取り扱いに同意したものとして、記録します。同意の記録は、このブラウザに保存され、次回からは、この画面を省きます（保存できない設定のブラウザでは、毎回、表示されます）。"],
-      ["p", "同意するまでは、Firebaseへの通信と、画像の読み込みを、しません。ページを表示するためのGitHubへの通信は、この画面を出す前に、行われます。"],
-      ["p", "同意しない場合は、このページを、使えません。同意の記録を消したいときは、ブラウザの保存データを消してください（サーバーのデータは、消えません）。"]]],
-    ["7. 説明内容の変更", [
-      ["p", "機能や、使う外部サービス、情報の取り扱いが変わったときは、実際の仕様に合わせて、この説明を更新し、もう一度、同意をお願いします。この説明は、情報の取り扱いを、利用者にお知らせするものです。"]]]
+    ["", [
+      ["b", "当サイトでは、絶対に個人情報を入力しないでください。"],
+      ["b", "登録された作戦と履歴の内容は暗号化して保存されます。"],
+      ["b", "LABへのログイン時には、名前・端末の種類・ブラウザごとに作られたランダムなID・操作の内容と時刻が履歴に残ります。IDは、同じブラウザかどうかを見分けるためのランダムな番号で、個人を特定するものではありません。操作の内容は暗号化されていて、パスワードを知るチームのメンバーだけが見られます。「いつ」操作されたか（時刻と件数）は暗号化されず、開発者も確認できます（サイト管理のために必要です）。"],
+      ["b", "LABのURLとパスワードは大切に保管し、信頼できる人物にのみ共有してください。"],
+      ["b", "URLとパスワードが流出してしまった場合は、LABを削除して作戦と履歴のデータを削除できます。その後、新しいLABを作成してください。"]]]
   ];
   function showConsent() {
     gate(function (c) {
-      brand(c, "データの取り扱いとご利用にあたって");
+      brand(c, "ご利用の前に");
       var box = el("div", "consent");
-      box.appendChild(el("div", "", "このページは、チームの作戦データを保存・共有するため、ブラウザ内への情報の保存や、外部サービスとの通信を行います。取り扱う情報と、注意事項を、ご確認ください。"));
       POLICY.forEach(function (sec) {
-        box.appendChild(el("h3", "", sec[0]));
+        if (sec[0]) box.appendChild(el("h3", "", sec[0]));
         sec[1].forEach(function (it) {
           if (it[0] === "l") {
             var d = el("div", "links");
@@ -1418,7 +1623,7 @@
       var go = el("button", "go", "同意して進む"); go.type = "button"; c.appendChild(go);
       var no = el("button", "btn nogo", "同意しない"); no.type = "button"; c.appendChild(no);
       go.addEventListener("click", function () { giveConsent(); $("gate").hidden = true; start(); });
-      no.addEventListener("click", function () { m.textContent = "同意いただけない場合は、このページは、ご利用になれません。このタブを、閉じてください。"; });
+      no.addEventListener("click", function () { m.textContent = "同意いただけない場合はこのLABはご利用になれません。このタブを閉じてください。"; });
     });
   }
   if (hasConsent()) start(); else showConsent();
