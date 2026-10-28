@@ -48,7 +48,12 @@
   #pal input { width: 100%; flex: none; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: inherit; font-size: 13px; }
   #pal .hint { flex: none; margin: 0; }
   .palbox { flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; touch-action: none; scrollbar-width: none; }
-  .palbox::-webkit-scrollbar { display: none; }                                      /* スクロールバーは見せない（ホイール・指のスクロールは、できる） */     /* ハンターの名札置き場と、サバイバーの名札置き場は、別々にスクロール */
+  .palbox::-webkit-scrollbar { display: none; }
+  * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--ac) 65%, var(--bg0)) transparent; }                      /* スクロールバーは、デザインの色（サブカラー）に合わせる */
+  *::-webkit-scrollbar { width: 9px; height: 9px; } *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ac) 65%, var(--bg0)); border-radius: 6px; border: 2px solid transparent; background-clip: padding-box; }
+  *::-webkit-scrollbar-thumb:hover { background: var(--ac); background-clip: padding-box; }
+  html[data-style="cyber"] *::-webkit-scrollbar-thumb, html[data-style="rock"] *::-webkit-scrollbar-thumb { border-radius: 0; }                                      /* スクロールバーは見せない（ホイール・指のスクロールは、できる） */     /* ハンターの名札置き場と、サバイバーの名札置き場は、別々にスクロール */
   .palbox.h { border-top: 2px solid var(--h); } .palbox.s { border-top: 2px solid var(--s); }
   .palopt { flex: none; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--sub); margin: 0 2px; cursor: pointer; user-select: none; }
   #pal .palopt input { width: auto; flex: none; padding: 0; accent-color: var(--s); }
