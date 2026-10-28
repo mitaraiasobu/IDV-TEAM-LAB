@@ -92,6 +92,8 @@
   .pgrid .psel, .pgrid .pname { width: 100%; font: inherit; font-size: 12px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 4px; text-align: center; }
   .pgrid .pname { color: var(--sub); background: none; border-style: dashed; }
   .drop.cell { min-height: 84px; justify-content: center; }
+  .gbrow { display: flex; flex-wrap: wrap; gap: 3px; margin: -2px 0 4px; } .gbrow[hidden] { display: none; }
+  .gbface { width: 26px; height: 26px; border-radius: 4px; background-repeat: no-repeat; background-color: rgba(0,0,0,.35); filter: grayscale(1) brightness(.85); flex: none; cursor: pointer; }
   .drop.col { flex-direction: column; flex-wrap: nowrap; align-items: center; min-height: 100px; }                                      /* キャラは、縦に並ぶ */
   .tag.sel { outline: 3px solid #fff; }
   .ghost .gcount { position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); background: var(--ac); color: var(--ac-on); font-size: 12px; font-weight: 800; padding: 1px 8px; border-radius: 10px; }
@@ -1105,7 +1107,7 @@
       if (p[3] === "memo") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + "のメモを書き換えた";
       if (p[3] === "slots") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[p[4]] || "PICK") + "のスロットの数を変えた";
       if (p[3] === "pl") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " PICKの選手名を変えた";
-      var bn = baseB(p[3] || ""), cm0 = parseCell(p[3] || ""), sn = cm0 ? "スロット" + cm0.r + "・" + cm0.c + "番目" : "";
+      var bn = baseB(p[3] || ""), cm0 = parseCell(p[3] || ""), sn = cm0 ? "編成" + cm0.r + "・" + cm0.c + "番目" : "";
       return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[bn] || "PICK") + (sn ? "（" + sn + "）" : "") + (add ? " に " : " から ") + ch(p[4]) + (add ? " を入れた" : " を外した");
     }
     return path;
@@ -1433,7 +1435,18 @@
   function baseB(b) { return String(b).replace(/\d+$/, ""); }                       // pick2 → pick（スロット2の名前から、基本の名前へ）
   function blockFaction(v, b) { b = baseB(b); return b === "ban" || b === "epick" || b === "egb" ? opp(v) : v; }
   function slotMode() { return !obj(STATE.cfg).slotoff; }                           // スロットモードを使うか（LAB全員で共通。オフでも、スロットのデータは消さない）
-  function slotCount(v, base) { if (!slotMode()) return 1; var n = Number(obj(obj(obj(setState())[v]).slots)[base]); return n >= 2 ? Math.min(Math.floor(n), 6) : 1; }          // PICKのスロットの数
+  function slotCountOf(v, base, r, i) {                                              // i番目のセットの、編成の数：そのセットで決めていなければ、前のセットの数を引き継ぐ
+    for (; i >= 0; i--) {
+      var n = Number(obj(obj(obj(obj(STATE.sets)[r.no + "_" + r.sets[i].k])[v]).slots)[base]);
+      if (n >= 1) return Math.min(Math.floor(n), 6);
+    }
+    return 1;
+  }
+  function slotCount(v, base) {                                                      // PICKのスロット（編成）の数
+    if (!slotMode()) return 1;
+    var r = curRound(), s = curSet();
+    return r && s ? slotCountOf(v, base, r, (r.sets || []).indexOf(s)) : 1;
+  }
   function cellName(base, r, c) { return base + r + c; }                              // スロットr行の、c番目の選手の枠（例：pick12＝1行目の2番目の選手）
   function parseCell(nm) { var m = /^(e?pick)([1-6])([1-9])$/.exec(nm); return m ? { base: m[1], r: Number(m[2]), c: Number(m[3]) } : null; }
   function slotNames(v, base) {                                                      // スロットモード：すべての枠（行×選手の列）／オフ：PICKの1つの枠
@@ -1529,8 +1542,8 @@
     else if (old !== path + "/" + id) {
       var row = blockPickedMap(s0, f, parts[2]), placed = rowPlaced(f, cm.base, cm.r, P), gb = {}, hd = hardOf(s0);
       Object.keys(cur).forEach(function (k) { if (!hd[k]) delete row[k]; delete placed[k]; });          // 置き換えるので、いまの中身は数えない
-      if (cm.base === "pick") globalList(f, curRound(), s0).forEach(function (g) { gb[g] = true; });
-      if (gb[id]) msg = charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。";
+      if (cm.base === "pick") rowGlobal(f, cm.r, curRound(), s0).forEach(function (g) { gb[g] = true; });
+      if (gb[id]) msg = charName(id) + "は、編成" + cm.r + "でGLOBAL BANされているため、この編成にはPICKできません。";
       else if (placed[id]) msg = charName(id) + "は、この編成（同じ行）にすでに入っています。";
       else if (isSurvivorPick(f, cm.base) && (s0.cb || []).length) { var cst = comboState(s0, row, P); if (cst.blocked[id]) msg = cst.blocked[id][0]; }
       if (!msg) {
@@ -1649,6 +1662,25 @@
     }
     return out;
   }
+  function rowIds(r, j, v, row) {                                                   // j番目のセットの、v目線のPICKの、row番目の編成に入れたキャラ（必須のキャラも含む）
+    var sj = r.sets[j], st = obj(obj(obj(STATE.sets)[r.no + "_" + sj.k])[v]), P = Math.max(1, capOf(sj, v, "pick")), out = [];
+    for (var c = 1; c <= P; c++) { var m = obj(st[cellName("pick", row, c)]); Object.keys(m).forEach(function (k) { if (m[k]) out.push(Number(k)); }); }
+    ((sj.req && sj.req[v]) || []).forEach(function (q) { if (!q.g) out.push(q.id); });
+    return out;
+  }
+  function rowGlobal(v, row, r, s) {                                                 // スロットモード：row番目の編成の、GLOBAL BAN（前のセットの同じ編成で使ったキャラ）。BOTが知っている使用済みは、すべての編成で共通
+    var lbs = lbSet(s), out = [], als = {};
+    ((s.al || {})[v] || []).forEach(function (id) { als[id] = true; });
+    function add(id) { if (CH[id] && CH[id].f === v && out.indexOf(id) < 0 && !lbs[id] && !als[id]) out.push(id); }
+    ((s.gb || {})[v] || []).forEach(add);
+    if ((s.gbOn || {})[v]) { var i = (r.sets || []).indexOf(s); for (var j = 0; j < i; j++) rowIds(r, j, v, row).forEach(add); }
+    return out;
+  }
+  function gbEvery(v, r, s) {                                                        // どの編成でもGLOBAL BANのキャラ（名札置き場で、灰色にする）
+    var n = slotCount(v, "pick"), out = null;
+    for (var row = 1; row <= n; row++) { var l = rowGlobal(v, row, r, s); out = out === null ? l : out.filter(function (id) { return l.indexOf(id) >= 0; }); }
+    return out || [];
+  }
   function epickedIds(rno, k, v) {                                                   // そのセットの、v目線の「相手のPICK予想」（スロット1）
     var m = obj(obj(obj(obj(STATE.sets)[rno + "_" + k])[v]).epick);
     return Object.keys(m).map(Number).filter(function (id) { return m[id] && CH[id] && CH[id].f === opp(v); });
@@ -1685,8 +1717,8 @@
         });
         Object.keys(cbl).forEach(function (k) { gray[k] = (gray[k] || []).concat(cbl[k]); });
       }
-      if (s0 && rd0) ["s", "h"].forEach(function (f) {                                // GLOBAL BAN（前のセットで使ったキャラ）も、灰色
-        globalList(f, rd0, s0).forEach(function (id) { (gray[id] = gray[id] || []).push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。"); });
+      if (s0 && rd0) ["s", "h"].forEach(function (f) {                                // GLOBAL BAN（前のセットで使ったキャラ）も、灰色（スロットモードは、どの編成でもGLOBAL BANのキャラだけ）
+        (slotMode() ? gbEvery(f, rd0, s0) : globalList(f, rd0, s0)).forEach(function (id) { (gray[id] = gray[id] || []).push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。"); });
       });
     }
     function addTag(box, c) {
@@ -1953,6 +1985,7 @@
         var side = el("div", "side " + sd[0]);
         side.appendChild(el("h5", "", sd[1] + "（" + fname(sd[2]) + "）"));
         sd[3].forEach(function (b) {
+          if (b === "gb" && slotMode() && !editableGb()) return;                       // スロットモード：GLOBAL BANは、編成ごとに、各行の下に出す
           var blk = el("div", "blk " + b), h = el("h4", "", blockTitle(v, b));
           var isPick = b === "pick" || b === "epick", cap = (b === "gb" || b === "egb") ? 1 : capOf(s, v, b);
           if (!isPick) h.appendChild(el("small", "", "（" + fname(b === "gb" ? v : b === "egb" ? opp(v) : blockFaction(v, b)) + "のキャラ）"));
@@ -1985,9 +2018,10 @@
             })(c1);
             for (var r1 = 1; r1 <= n; r1++) for (var c2 = 1; c2 <= cap; c2++) {
               var nm = cellName(b, r1, c2), d = el("div", "drop col cell"); d.id = "blk-" + v + "-" + nm;
-              d.setAttribute("data-drop", "set:" + v + ":" + nm); d.setAttribute("data-hint", n > 1 ? "枠" + r1 : "ここに名札");
+              d.setAttribute("data-drop", "set:" + v + ":" + nm); d.setAttribute("data-hint", n > 1 ? "編成" + r1 : "ここに名札");
               clickDrop("set:" + v + ":" + nm, d);
               cols.appendChild(d);
+              if (c2 === cap && b === "pick") { var gr = el("div", "gbrow"); gr.id = "gbr-" + v + "-" + r1; gr.hidden = true; gr.style.gridColumn = "1 / -1"; cols.appendChild(gr); }          // その編成のGLOBAL BAN（小さな顔だけ）
             }
             blk.appendChild(cols);
           } else {
@@ -2071,9 +2105,9 @@
           d.textContent = "";
           d.classList.toggle("empty", !ids.length);
           ids.forEach(function (id) {
-            var isBad = base === "pick" ? !!gbv[f][id] : !!egbv[f][id], mw = [];
+            var cmx = parseCell(nm), isBad = base === "pick" ? (cmx ? rowGlobal(f, cmx.r, rd, s).indexOf(id) >= 0 : !!gbv[f][id]) : !!egbv[f][id], mw = [];
             if (req[id]) mw.push(reqWhy(req[id]));
-            if (isBad && base === "pick") mw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。");
+            if (isBad && base === "pick") mw.push(charName(id) + "は、編成" + (cmx ? cmx.r : "") + "でGLOBAL BANされているため、PICKできません。");
             if (isBad && base === "epick") mw.push(charName(id) + "は、前のセットで予想したキャラ（相手のGLOBAL BAN）のため、PICKできない予想になります。");
             if (cst0.violated[id]) mw = mw.concat(cst0.violated[id]);
             var tg = makeTag(CH[id], { req: !!req[id], bad: isBad, gray: !!cst0.violated[id], why: mw, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
@@ -2091,6 +2125,20 @@
                 var rowAll = blockPickedMap(s, f, cellName(base, rr, 1));
                 var cst0 = isSurvivorPick(f, base) && (s.cb || []).length ? comboState(s, rowAll, cap) : { blocked: {}, violated: {} };
                 for (var cc = 1; cc <= cap; cc++) fillCell(f, base, cellName(base, rr, cc), cst0);
+              }
+              if (base === "pick") for (var rg = 1; rg <= slotCount(f, base); rg++) {
+                var gr2 = $("gbr-" + f + "-" + rg);
+                if (!gr2) continue;
+                var gl2 = rowGlobal(f, rg, rd, s);
+                gr2.textContent = ""; gr2.hidden = !gl2.length;                           // 1つ目のセットなど、GLOBAL BANが無いときは、何も出さない
+                gl2.forEach(function (id) {
+                  var fb = el("div", "gbface"); fb.setAttribute("data-id", id);
+                  fb._why = [charName(id) + "は、編成" + rg + "でGLOBAL BANされています。"];
+                  paintFace(fb, CH[id], 26);
+                  fb.addEventListener("click", function (e) { if (e.pointerType !== "touch") showWhy(fb); });
+                  fb.addEventListener("pointerdown", function (e) { if (e.pointerType === "touch") { var tm = setTimeout(function () { showWhy(fb); }, 450); fb.addEventListener("pointerup", function () { clearTimeout(tm); }, { once: true }); fb.addEventListener("pointercancel", function () { clearTimeout(tm); }, { once: true }); } });
+                  gr2.appendChild(fb);
+                });
               }
               if (base === "pick") for (var c3 = 1; c3 <= cap; c3++) {
                 var sl3 = $("psel-" + f + "-" + base + c3);                              // この列の選手名
