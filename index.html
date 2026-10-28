@@ -581,18 +581,30 @@
     var a = el("a", "", CONTACT); a.href = CONTACT; a.target = "_blank"; a.rel = "noopener noreferrer"; div.appendChild(a);
   }
   var WAITING = "このチームの場所がまだ用意されていません。しばらくしてから、開き直してください。";
-  function stream(name, onData) {
-    var data = null, url = DBURL + "/" + name + ".json", es = null, poll = null;
+  // 同時につなげる数には、Firebaseの無料枠で上限（100）がある。つなぎっぱなしの接続は、ログの1本だけにして、見ていないとき・操作がないときは切る。
+  // opt.every（ミリ秒）：つなぎっぱなしにせず、その間隔で取りに行く（メタ情報は、めったに変わらない）。返すもの：{ open, close }
+  function stream(name, onData, opt) {
+    var data = null, url = DBURL + "/" + name + ".json", es = null, poll = null, lastJson = null, every = opt && opt.every;
     function emit() { onData(data); }
     function pollOnce() {
       fetch(url + "?t=" + Date.now(), { cache: "no-store" }).then(function (r) {
         if (r.status === 401 || r.status === 403) { setStatus("× 読み取れません", "ng"); problem(DENIED); return undefined; }
         if (!r.ok) { setStatus("× つながっていません（" + r.status + "）", "ng"); return undefined; }
-        return r.json().then(function (j) { data = j; emit(); setStatus("● 同期中（ポーリング）", "ok"); if (name === "meta" && j == null) problem(WAITING); });
+        return r.json().then(function (j) {
+          var js = JSON.stringify(j);
+          if (js !== lastJson) { lastJson = js; data = j; emit(); }                                   // 変わったときだけ、画面に反映する
+          setStatus("● 同期中", "ok"); if (name === "meta" && j == null) problem(WAITING);
+        });
       }).catch(function () { setStatus("× つながっていません", "ng"); });
     }
-    function startPoll() { if (poll) return; pollOnce(); poll = setInterval(pollOnce, 3000); }
-    if (!window.EventSource) { startPoll(); return; }
+    function startPoll(ms) { if (poll) return; pollOnce(); poll = setInterval(pollOnce, ms || 3000); }
+    function close() { if (es) { es.close(); es = null; } if (poll) { clearInterval(poll); poll = null; } }
+    function open() {
+      if (es || poll) return;
+      if (every || !window.EventSource) { startPoll(every); return; }
+      connect();
+    }
+    function connect() {
     es = new EventSource(url);
     es.addEventListener("put", function (e) { var d = JSON.parse(e.data); data = setPath(data, d.path, d.data); emit(); setStatus("● 同期中", "ok"); if (name === "meta" && data == null) problem(WAITING); });
     es.addEventListener("patch", function (e) {
@@ -602,7 +614,34 @@
     });
     es.addEventListener("cancel", function () { setStatus("× 読み取れません", "ng"); problem(DENIED); });
     es.addEventListener("auth_revoked", function () { setStatus("× 読み取れません", "ng"); problem(DENIED); });
-    es.onerror = function () { setStatus("再接続中…", "ng"); if (es.readyState === 2) { es.close(); startPoll(); } };
+    es.onerror = function () { setStatus("再接続中…", "ng"); if (es && es.readyState === 2) { es.close(); es = null; startPoll(); } };
+    }
+    open();
+    return { open: open, close: close };
+  }
+
+  // 見ていない（タブが隠れて30秒）・操作がない（5分）とき：つなぎっぱなしの接続を切る。戻ったり、操作したりすると、つなぎ直す。
+  var PARK_HIDDEN = 30000, PARK_IDLE = 300000;
+  function keepLight(list) {
+    var parked = false, hideT = null, idleT = null;
+    function park() {
+      if (parked) return;
+      parked = true; list.forEach(function (s) { s.close(); });
+      setStatus("● 待機中（操作すると、つなぎ直します）", "ok");
+    }
+    function wake() {
+      clearTimeout(hideT); clearTimeout(idleT);
+      if (parked) { parked = false; list.forEach(function (s) { s.open(); }); }
+      if (!document.hidden) idleT = setTimeout(park, PARK_IDLE);
+    }
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) { clearTimeout(hideT); hideT = setTimeout(park, PARK_HIDDEN); } else wake();
+    });
+    var lastAct = 0;
+    ["pointerdown", "keydown", "touchstart", "wheel"].forEach(function (ev) {
+      document.addEventListener(ev, function () { var n = Date.now(); if (parked || n - lastAct > 5000) { lastAct = n; wake(); } }, true);
+    });
+    idleT = setTimeout(park, PARK_IDLE);
   }
 
   // ───────── 追記ログ：編集・訪問の1回ごとに、暗号化した1件を足す（あとから消せない・書き換えられない） ─────────
@@ -895,8 +934,7 @@
   function enter() {
     $("gate").hidden = true; $("stage").hidden = false;
     fit();
-    stream("meta", onMeta);
-    stream("log", onLog);
+    keepLight([stream("meta", onMeta, { every: 60000 }), stream("log", onLog)]);          // メタ情報は、60秒ごとに取りに行く（つなぎっぱなしは、ログの1本だけ）
     sendEvent({ k: "v" });                                                    // 訪問の記録（この端末のIDと、端末の名前）
   }
   function randomId() {                                                               // 暗号用の乱数で、24文字（英大文字・小文字・数字）
