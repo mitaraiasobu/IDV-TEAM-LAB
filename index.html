@@ -2066,7 +2066,7 @@
     function fname(f) { return f === "h" ? "ハンター" : "サバイバー"; }
     function blockTitle(v, b) {
       if (b === "gb") return editableGb() ? "GLOBAL BAN（自動。手で直せます）" : "GLOBAL BAN（自動）";
-      if (b === "egb") return "GLOBAL BAN（予想）";
+      if (b === "egb") return "相手のGLOBAL BAN（前のセットで使ったキャラ・予想）";
       if (b === "pick") return fname(v) + "PICK";
       if (b === "epick") return "相手の" + fname(opp(v)) + "PICK予想";
       return BLK[b];
@@ -2148,7 +2148,7 @@
               d2.setAttribute("data-hint", (s.gbOn || {})[v] ? "前のセットで使ったキャラがここに入ります" : "このセットはGLOBAL BANなし");
               if (editableGb()) { d2.setAttribute("data-drop", "gbx:" + v); clickDrop("gbx:" + v, d2); }
             } else if (b === "egb") {                                                    // 相手のGLOBAL BANの予想：自動では入れない（人数も決まっていない。ローカル許可キャラが選ばれると、1人少なくなる）
-              d2.setAttribute("data-drop", "set:" + v + ":egb"); d2.setAttribute("data-hint", "相手のGLOBAL BANを予想して、ここに入れる（人数は自由）"); clickDrop("set:" + v + ":egb", d2);
+              d2.setAttribute("data-drop", "set:" + v + ":egb"); d2.setAttribute("data-hint", "相手が前のセットで使ったキャラ（このセットでは選べないキャラ）を予想して、ここに入れる"); clickDrop("set:" + v + ":egb", d2);
             } else if (cap === 0) { d2.classList.add("off"); d2.textContent = BLK[b] + "はできないセットです"; }
             else { d2.setAttribute("data-drop", "set:" + v + ":" + b); d2.setAttribute("data-hint", "ここに名札を入れる"); clickDrop("set:" + v + ":" + b, d2); }
             blk.appendChild(d2);
