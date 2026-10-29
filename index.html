@@ -1769,9 +1769,8 @@
     var m = obj(obj(obj(obj(STATE.sets)[rno + "_" + k])[v]).epick);
     return Object.keys(m).map(Number).filter(function (id) { return m[id] && CH[id] && CH[id].f === opp(v); });
   }
-  function globalEnemy(v, r, s) {                                                    // 相手のGLOBAL BAN（予想）：自動では入れない。この目線で、手で入れたキャラ（人数は決まっていない）
-    var m = obj(obj(obj(obj(STATE.sets)[r.no + "_" + s.k])[v]).egb);
-    return Object.keys(m).map(Number).filter(function (id) { return m[id] && CH[id] && CH[id].f === opp(v); }).sort(byPlaced(m));
+  function globalEnemy(v, r, s) {                                                    // 相手のGLOBAL BAN：相手チームが前のセットで使ったキャラ（BOTが、自動で入れる）
+    return ((s.egb || {})[opp(v)] || []).filter(function (id) { return CH[id] && CH[id].f === opp(v); });
   }
   function reqIds() {
     var s = curSet(), out = {};
@@ -2066,7 +2065,7 @@
     function fname(f) { return f === "h" ? "ハンター" : "サバイバー"; }
     function blockTitle(v, b) {
       if (b === "gb") return editableGb() ? "GLOBAL BAN（自動。手で直せます）" : "GLOBAL BAN（自動）";
-      if (b === "egb") return "相手のGLOBAL BAN（前のセットで使ったキャラ・予想）";
+      if (b === "egb") return "GLOBAL BAN（自動）";
       if (b === "pick") return fname(v) + "PICK";
       if (b === "epick") return "相手の" + fname(opp(v)) + "PICK予想";
       return BLK[b];
@@ -2148,7 +2147,7 @@
               d2.setAttribute("data-hint", (s.gbOn || {})[v] ? "前のセットで使ったキャラがここに入ります" : "このセットはGLOBAL BANなし");
               if (editableGb()) { d2.setAttribute("data-drop", "gbx:" + v); clickDrop("gbx:" + v, d2); }
             } else if (b === "egb") {                                                    // 相手のGLOBAL BANの予想：自動では入れない（人数も決まっていない。ローカル許可キャラが選ばれると、1人少なくなる）
-              d2.setAttribute("data-drop", "set:" + v + ":egb"); d2.setAttribute("data-hint", "相手が前のセットで使ったキャラ（このセットでは選べないキャラ）を予想して、ここに入れる"); clickDrop("set:" + v + ":egb", d2);
+              d2.setAttribute("data-hint", (s.gbOn || {})[opp(v)] ? "相手が前のセットで使ったキャラがここに入ります" : "このセットはGLOBAL BANなし");
             } else if (cap === 0) { d2.classList.add("off"); d2.textContent = BLK[b] + "はできないセットです"; }
             else { d2.setAttribute("data-drop", "set:" + v + ":" + b); d2.setAttribute("data-hint", "ここに名札を入れる"); clickDrop("set:" + v + ":" + b, d2); }
             blk.appendChild(d2);
@@ -2226,7 +2225,7 @@
             var cmx = parseCell(nm), isBad = base === "pick" ? (cmx ? rowGlobal(f, cmx.r, rd, s).indexOf(id) >= 0 : !!gbv[f][id]) : !!egbv[f][id], mw = [];
             if (req[id]) mw.push(reqWhy(req[id]));
             if (isBad && base === "pick") mw.push(charName(id) + "は、編成" + (cmx ? cmx.r : "") + "でGLOBAL BANされているため、PICKできません。");
-            if (isBad && base === "epick") mw.push(charName(id) + "は、前のセットで予想したキャラ（相手のGLOBAL BAN）のため、PICKできない予想になります。");
+            if (isBad && base === "epick") mw.push(charName(id) + "は、前のセットで相手が使ったキャラ（相手のGLOBAL BAN）のため、PICKできない予想になります。");
             if (cst0.violated[id]) mw = mw.concat(cst0.violated[id]);
             var tg = makeTag(CH[id], { req: !!req[id], bad: isBad, gray: !!cst0.violated[id], why: mw, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
             if (isSel(id, { kind: "blk", spec: spec })) tg.classList.add("sel");
@@ -2294,7 +2293,7 @@
                 var isBad = badOf(id), mw = [];
                 if (req[id]) mw.push(reqWhy(req[id]));
                 if (isBad && base === "pick") mw.push(charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。");
-                if (isBad && base === "epick") mw.push(charName(id) + "は、前のセットで予想したキャラ（相手のGLOBAL BAN）のため、PICKできない予想になります。");
+                if (isBad && base === "epick") mw.push(charName(id) + "は、前のセットで相手が使ったキャラ（相手のGLOBAL BAN）のため、PICKできない予想になります。");
                 if (isBad && (base === "ban" || base === "eban")) mw.push(charName(id) + "は、ローカルBANのキャラです（BANしても意味がありません）。");
                 if (cst.violated[id]) mw = mw.concat(cst.violated[id]);
                 var t = makeTag(CH[id], { req: !!req[id], bad: isBad, gray: !!cst.violated[id], why: mw, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
@@ -2335,9 +2334,8 @@
             var el3 = globalEnemy(f, rd, s);
             eg.classList.toggle("empty", !el3.length);
             el3.forEach(function (id) {
-              var sp = "set:" + f + ":egb", tg = makeTag(CH[id], { why: [charName(id) + "は、相手のGLOBAL BANと予想したキャラです。相手のPICK予想には入れられません。"], onRemove: function () { var o = {}; o[dropPath(sp) + "/" + id] = null; write(o); } });
-              if (isSel(id, { kind: "blk", spec: sp })) tg.classList.add("sel");
-              attachTag(tg, CH[id], { kind: "blk", spec: sp });
+              var tg = makeTag(CH[id], { why: [charName(id) + "は、相手が前のセットで使ったキャラ（GLOBAL BAN）です。相手のPICK予想には入れられません。"] });
+              tg.classList.add("locked");
               eg.appendChild(tg);
             });
           }
