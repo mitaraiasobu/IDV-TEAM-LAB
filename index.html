@@ -34,6 +34,22 @@
                font: inherit; font-size: 14px; cursor: pointer; }
   nav button.on { background: var(--panel2); border-color: #6f84ad; border-bottom-color: var(--panel2); font-weight: 700; }
   #tabs2 button { font-size: 13px; padding: 5px 12px; }
+  #simbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 16px; border-bottom: 1px solid var(--line); }
+  #simbar[hidden] { display: none; }
+  #simbar button { font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); cursor: pointer; }
+  #simbar button.simgo { background: var(--gold); border-color: var(--gold); color: #05070b; font-weight: 700; }
+  #simbar .simhint { font-size: 12px; color: var(--sub); } #simbar .simlabel { font-size: 14px; font-weight: 700; color: var(--gold); }
+  .tag.m { border-color: var(--gold); background: linear-gradient(180deg, #3a3210, #6a5a14); cursor: pointer; }
+  .tag.m .face { font-size: 12px; padding: 2px; line-height: 1.1; text-align: center; word-break: break-all; }
+  .tag.m.sel { box-shadow: 0 0 0 3px var(--gold), 0 0 14px 3px rgba(255, 210, 63, .8); }
+  .mslot { display: inline-flex; min-width: 66px; min-height: 60px; align-items: center; justify-content: center; border: 2px dashed var(--line); border-radius: 8px; cursor: pointer; vertical-align: middle; }
+  .mslot .ph { color: var(--sub); font-size: 20px; } .mslot.armed { border-color: var(--gold); background: rgba(255, 210, 63, .08); }
+  .simnow.mslot, label.simnow .mslot { border-color: var(--gold); }
+  .simfuture { opacity: .12; filter: grayscale(1); transition: opacity .35s, filter .35s; }
+  .simnow.tag { box-shadow: 0 0 0 3px var(--gold), 0 0 18px 6px rgba(255, 210, 63, .9); transform: translateY(-3px) scale(1.06); z-index: 5; animation: simpulse 1.1s ease-in-out infinite; }
+  .simnow.frame, .simnow.drop { border-color: var(--gold); border-style: solid; box-shadow: 0 0 14px 3px rgba(255, 210, 63, .7); animation: simpulse 1.1s ease-in-out infinite; }
+  .simnow.msel, label.simnow { color: var(--gold); text-shadow: 0 0 8px rgba(255, 210, 63, .9); }
+  @keyframes simpulse { 50% { filter: brightness(1.35); } }
   #notice { margin: 4px 16px; font-size: 13px; }
   #notice .bar { padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; }
   #notice .bad { background: #4a1219; border: 1px solid #ff3b52; color: #ffb3bb; animation: blink 1s steps(2, start) infinite; }
@@ -376,6 +392,7 @@
 </header>
 <nav id="tabs1"></nav>
 <nav id="tabs2"></nav>
+<div id="simbar" hidden></div>
 <div id="notice"></div>
 <main>
   <aside id="pal"></aside>
@@ -1280,8 +1297,11 @@
     var t2 = $("tabs2"); t2.textContent = "";
     var r = curRound();
     if (r) (r.sets || []).forEach(function (s) { t2.appendChild(tab(s.label, s.k === (curSet() || {}).k, function () { go(r.no, s.k); })); });
+    paintSimBar();
   }
   function go(tab, set) {
+    if (typeof simStop === "function") simStop();                                       // タブを変えたら、再生はやめる
+    MAPSEL = null;
     cur.tab = tab;
     if (set) cur.set = set; else if (isRoundTab()) { var r = curRound(); cur.set = r && r.sets[0] ? r.sets[0].k : "1"; }
     try { sessionStorage.setItem("lab_tab_" + ID, JSON.stringify(cur)); } catch (e) { /* 無視 */ }
@@ -1600,6 +1620,50 @@
   }
 
   // ───────── 描画 ─────────
+  // ───────── BAN/PICKの順番の再生（大会のBAN/PICKと同じ順番で、いま選ぶ枠を光らせて見せる） ─────────
+  var SIM = { on: false, playing: false, i: 0, timer: null }, SIM_GAP = 2200;
+  function simSteps() { var s = curSet(); return (s && s.st) || []; }
+  function simLabel(i) {
+    var x = simSteps()[i - 1], N = { h: "ハンター", s: "サバイバー", m: "マップ" };
+    return x ? circ(i) + " " + N[x.s] + "側：" + N[x.t] + "を" + (x.a === "b" ? "BAN" : "PICK") + "（" + x.n + "）" : "";
+  }
+  function applySim() {                                                                // 順番の来ていない枠は薄く、いま選ぶ枠は光らせる（番号つきの枠・名札・マップの選択）
+    var w = $("work"); if (!w) return;
+    var on = SIM.on && simSteps().length > 0;
+    Array.prototype.forEach.call(w.querySelectorAll("[data-num], .mapbar label"), function (e) {
+      var ch = e.tagName === "LABEL" ? (e.textContent || "").charAt(0) : e.getAttribute("data-num"), n = CIRC.indexOf(ch) + 1;
+      e.classList.toggle("simfuture", on && n > SIM.i);
+      e.classList.toggle("simnow", on && n > 0 && n === SIM.i);
+    });
+  }
+  function simTimer() { clearInterval(SIM.timer); SIM.timer = null; if (!SIM.playing) return; SIM.timer = setInterval(function () { if (SIM.i >= simSteps().length) { SIM.playing = false; simTimer(); paintSimBar(); return; } SIM.i++; applySim(); paintSimBar(); }, SIM_GAP); }
+  function simStop() { clearInterval(SIM.timer); SIM.timer = null; SIM.on = false; SIM.playing = false; SIM.i = 0; applySim(); paintSimBar(); }
+  function simStart() { SIM.on = true; SIM.playing = true; SIM.i = 1; applySim(); paintSimBar(); simTimer(); }
+  function simStep(d) { SIM.playing = false; simTimer(); SIM.i = Math.max(1, Math.min(simSteps().length, SIM.i + d)); applySim(); paintSimBar(); }
+  function paintSimBar() {
+    var bar = $("simbar"); if (!bar) return;
+    bar.textContent = "";
+    var n = simSteps().length;
+    if (!isRoundTab() || !n) { bar.hidden = true; if (SIM.on) { SIM.on = false; SIM.playing = false; clearInterval(SIM.timer); applySim(); } return; }
+    bar.hidden = false;
+    function btn(label, cls, fn) { var b = el("button", cls || "", label); b.type = "button"; b.addEventListener("click", fn); bar.appendChild(b); }
+    if (!SIM.on) {
+      btn("▶ BAN/PICKを順番に再生", "simgo", simStart);
+      bar.appendChild(el("span", "simhint", "大会のBAN/PICKと同じ順番で、いま選ぶ枠を光らせて見せます"));
+      return;
+    }
+    SIM.i = Math.max(1, Math.min(n, SIM.i));
+    btn(SIM.playing ? "⏸ 一時停止" : (SIM.i >= n ? "↺ もう一度" : "▶ 再生"), "simgo", function () {
+      if (SIM.playing) { SIM.playing = false; simTimer(); paintSimBar(); return; }
+      if (SIM.i >= n) SIM.i = 1;
+      SIM.playing = true; applySim(); paintSimBar(); simTimer();
+    });
+    btn("◀ 前へ", "", function () { simStep(-1); });
+    btn("次へ ▶", "", function () { simStep(1); });
+    btn("✖ 終了", "", simStop);
+    bar.appendChild(el("span", "simlabel", simLabel(SIM.i) + "　（" + SIM.i + "/" + n + "）"));
+  }
+  try { new MutationObserver(function () { if (SIM.on) applySim(); }).observe($("work"), { childList: true, subtree: true }); } catch (e) { /* 無視 */ }
   function buildAll() {
     if (!META) return;
     buildTabs();
@@ -1724,6 +1788,17 @@
     if (s) ["h", "s"].forEach(function (f) { (s.lb && s.lb[f] || []).forEach(function (id) { out[id] = true; }); });
     return out;
   }
+  var MAPSEL = null;                                                                 // 名札置き場で選んだマップ（枠をタップして置く）
+  function mapTag(name, cls) { var tg = el("div", "tag m" + (cls ? " " + cls : "")); tg.appendChild(el("div", "face", name)); tg.appendChild(el("div", "nm", "マップ")); return tg; }
+  function paintMapSlots() {                                                         // マップの枠の中身を、いまの内容に合わせる
+    var st = obj(setState());
+    Array.prototype.forEach.call(document.querySelectorAll(".mslot"), function (n) {
+      var v = n.getAttribute("data-v"), name = String(obj(st[v])["map" + n.getAttribute("data-i")] || ""), sig = name + "|" + (MAPSEL ? "1" : "0");
+      if (n._sig === sig) return;
+      n._sig = sig; n.textContent = ""; n.classList.toggle("armed", !!MAPSEL);
+      if (name) { var tg = mapTag(name); tg.title = "もう一度タップすると、外れます"; n.appendChild(tg); } else n.appendChild(el("span", "ph", "＋"));
+    });
+  }
   function fillPalette() {
     FAVS = favSet();
     var q = palFilter.trim().toLowerCase(), req = isRoundTab() ? reqIds() : {}, gray = {}, hl = HILITE != null ? favIdsOf(HILITE) : {};
@@ -1755,6 +1830,12 @@
     var hb = $("palH"); hb.textContent = ""; hb.className = "grid";
     function hlFirst(list) { return HILITE == null || roleSort ? list : list.filter(function (c) { return hl[c.id]; }).concat(list.filter(function (c) { return !hl[c.id]; })); }          // 強調するキャラは、先頭へ
     hlFirst((META.chars || {}).h || []).forEach(function (c) { if (match(c)) addTag(hb, c); });
+    if (isRoundTab() && simSteps().some(function (x) { return x.t === "m"; })) (META.maps || []).forEach(function (nm) {          // マップの名札（ハンターのキャラの横）
+      if (q && nm.toLowerCase().indexOf(q) < 0) return;
+      var mt = mapTag(nm, MAPSEL === nm ? "sel" : ""); mt.title = "押して選び、「マップ」の枠をタップして置きます";
+      mt.addEventListener("click", function () { MAPSEL = MAPSEL === nm ? null : nm; fillPalette(); paintMapSlots(); });
+      hb.appendChild(mt);
+    });
     var sb = $("palS"); sb.textContent = "";
     var all = hlFirst((META.chars || {}).s || []);
     if (roleSort && (META.roles || []).length) {                               // 職業ごと：同じキャラが、いくつかの職業に出てもよい（並びは、いつもの並びのまま）
@@ -2006,11 +2087,13 @@
         var mb = el("div", "mapbar");
         msteps.forEach(function (m) {
           var own = m.x.s === v, lab = el("label", "", circ(m.i) + (own ? "" : "相手の") + "マップ" + (m.x.a === "b" ? "BAN" : "PICK") + (own ? "" : "（予想）"));
-          var sel = el("select", "msel"); sel.setAttribute("data-v", v); sel.setAttribute("data-i", m.i);
-          var o0 = el("option", "", "（マップを選ぶ）"); o0.value = ""; sel.appendChild(o0);
-          META.maps.forEach(function (nm) { var o = el("option", "", nm); o.value = nm; sel.appendChild(o); });
-          sel.addEventListener("change", function () { var o = {}; o["sets/" + setId() + "/" + v + "/map" + m.i] = sel.value || null; writeQuiet(o); });
-          lab.appendChild(sel); mb.appendChild(lab);
+          var slot = el("div", "mslot"); slot.setAttribute("data-v", v); slot.setAttribute("data-i", m.i);
+          slot.addEventListener("click", function () {                                   // 名札置き場で選んだマップを置く／入っているマップを外す
+            var key = "sets/" + setId() + "/" + v + "/map" + m.i, now = String(obj(obj(setState())[v])["map" + m.i] || ""), o = {};
+            if (MAPSEL) { o[key] = MAPSEL; MAPSEL = null; } else if (now) o[key] = null; else return;
+            write(o); fillPalette();
+          });
+          lab.appendChild(slot); mb.appendChild(lab);
         });
         c.appendChild(mb);
       }
@@ -2258,7 +2341,7 @@
               eg.appendChild(tg);
             });
           }
-          [].forEach.call(document.querySelectorAll('.msel[data-v="' + f + '"]'), function (ms) { var mv0 = String(obj(st[f])["map" + ms.getAttribute("data-i")] || ""); if (document.activeElement !== ms && ms.value !== mv0) ms.value = mv0; });          // マップ
+          paintMapSlots();                                                              // マップ
           var ta = $("memoText-" + f);                                                  // メモ（この目線の）
           if (ta) { var raw = obj(st[f]).memo, mv = String(raw != null ? raw : (f === "s" ? st.memo : "") || ""); if (document.activeElement !== ta && ta.value !== mv) ta.value = mv; }
         });
