@@ -1671,8 +1671,7 @@
     fill();
   }
   var palFilter = "";
-  var showMarks = true;                                      // 名札の職業マークを出すか（この端末の表示の設定）
-  try { showMarks = localStorage.getItem("lab_rolemark") !== "0"; } catch (e) { /* 無視 */ }
+  var showMarks = false;                                     // 名札の職業マークを出すか：「職業ごとの並び替え」と同じ（ひとつの設定。この端末の表示の設定）
   var palHide = { h: false, s: false };                      // 名札置き場の、折り畳み（この端末の表示の設定）
   try { var ph = localStorage.getItem("lab_pal_hide") || ""; palHide.h = ph.indexOf("h") >= 0; palHide.s = ph.indexOf("s") >= 0; } catch (e) { /* 無視 */ }
   function savePalHide() { try { localStorage.setItem("lab_pal_hide", (palHide.h ? "h" : "") + (palHide.s ? "s" : "")); } catch (e) { /* 無視 */ } }
@@ -1687,6 +1686,7 @@
   try { hSwap = localStorage.getItem("lab_hswap") === "1"; } catch (e) { /* 無視 */ }
   var roleSort = false;
   try { roleSort = localStorage.getItem("prep_role_sort") === "1"; } catch (e) { /* 無視 */ }
+  showMarks = roleSort;
   function buildPalette() {
     var pal = $("pal"); pal.textContent = "";
     var bh = el("div", "palbox h"), gh = el("div", "grid"); gh.id = "palH"; bh.appendChild(gh);
@@ -1694,14 +1694,10 @@
     var bs = el("div", "palbox s"), gs = el("div"); gs.id = "palS"; bs.appendChild(gs);
     var hs = el("div"); hs.style.cssText = "display:flex;align-items:center;flex-wrap:wrap;gap:2px 10px;flex:none";
     var lab = el("label", "palopt"), cb = el("input"); cb.type = "checkbox"; cb.id = "roleSort"; cb.checked = roleSort;
-    var lab2 = el("label", "palopt"), cb2 = el("input"); cb2.type = "checkbox"; cb2.id = "roleMark"; cb2.checked = showMarks;
-    hs.appendChild(foldBtn("s", "サバイバー", bs, function (hid) { lab.style.display = hid ? "none" : ""; lab2.style.display = hid ? "none" : ""; }));
-    cb.addEventListener("change", function () { roleSort = cb.checked; try { localStorage.setItem("prep_role_sort", roleSort ? "1" : "0"); } catch (e) { /* 無視 */ } fillPalette(); });
+    hs.appendChild(foldBtn("s", "サバイバー", bs, function (hid) { lab.style.display = hid ? "none" : ""; }));
+    cb.addEventListener("change", function () { roleSort = cb.checked; showMarks = roleSort; try { localStorage.setItem("prep_role_sort", roleSort ? "1" : "0"); } catch (e) { /* 無視 */ } fillPalette(); fill(); });         // 職業ごとに並べるときは、職業マークも出す
     lab.appendChild(cb); lab.appendChild(document.createTextNode("職業ごとの並び替え"));
-    hs.appendChild(lab);
-    cb2.addEventListener("change", function () { showMarks = cb2.checked; try { localStorage.setItem("lab_rolemark", showMarks ? "1" : "0"); } catch (e) { /* 無視 */ } fill(); });
-    lab2.appendChild(cb2); lab2.appendChild(document.createTextNode("職業マーク"));
-    hs.appendChild(lab2); pal.appendChild(hs);
+    hs.appendChild(lab); pal.appendChild(hs);
     pal.appendChild(bs);
     fillPalette();
   }
