@@ -117,6 +117,8 @@
   .pcard .pt { font-weight: 800; font-size: 16px; } .pcard .pn { font-size: 12px; color: var(--sub); } .pcard .pwhy { font-size: 12px; color: var(--gold); }
   .pgr2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   .pbtn { display: flex; align-items: center; justify-content: center; padding: 10px; border-radius: 12px; border: 2px solid var(--line); background: var(--panel); cursor: pointer; }
+  .bt { filter: drop-shadow(0 0 1px #ffd23f) drop-shadow(0 0 1px #ffd23f) drop-shadow(0 0 3px #ffd23f); }                       /* Borrowed Time（大事な人格）は、黄色い縁取り */
+  .pbtn.bt { border-color: #ffd23f; } .pbtn.bt img { filter: drop-shadow(0 0 1px #ffd23f) drop-shadow(0 0 1px #ffd23f) drop-shadow(0 0 3px #ffd23f); }
   .pbtn.on { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 210, 63, .6); } .pbtn img { width: 100%; max-width: 120px; aspect-ratio: 1; object-fit: contain; }
   .sbtn.txt { width: auto; padding: 0 8px; font-size: 12px; } .sbtn.arm { border-color: var(--gold); color: var(--gold); } .sbtn[disabled] { opacity: .35; cursor: default; }
   .cellw { display: flex; flex-direction: column; gap: 3px; min-width: 0; } .cellw .psel { width: 100%; }
@@ -1556,7 +1558,7 @@
     var ord = PORDER[side] || [0, 1, 2, 3], idx = Object.keys(pm).sort(function (a, b) { return ord.indexOf(Number(a)) - ord.indexOf(Number(b)); });          // 選んだ順ではなく、決まった並び（左から）で出す
     bar.title = "タップして、人格を選ぶ（2つまで）";
     if (!idx.length) bar.appendChild(el("span", "padd", "＋人格"));
-    else idx.forEach(function (i) { if (!PERSONA[side] || !PERSONA[side][i]) return; var im = new Image(); im.src = personaUrl(side, i); im.alt = PERSONA[side][i][1]; im.title = PERSONA[side][i][1]; bar.appendChild(im); });
+    else idx.forEach(function (i) { if (!PERSONA[side] || !PERSONA[side][i]) return; var im = new Image(); im.src = personaUrl(side, i); im.alt = PERSONA[side][i][1]; im.title = PERSONA[side][i][1]; if (PERSONA[side][i][0] === "Borrowedtime") im.className = "bt"; bar.appendChild(im); });
     bar.addEventListener("click", function (e) { e.stopPropagation(); openPersona(v, nm, charId); });
     bar.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
     return bar;
@@ -1568,7 +1570,6 @@
     var side = ch.f, ov = el("div", "pmod"), card = el("div", "pcard");
     ov.id = "pmod";
     card.appendChild(el("div", "pt", ch.n + " の人格（2つまで）"));
-    card.appendChild(el("div", "pn", "ただの相談用の目印です。ゲーム内で、同じ人格にしなくても大丈夫です。"));
     (why || []).forEach(function (x) { card.appendChild(el("div", "pwhy", x)); });
     var grid = el("div", "pgr2");
     function paint() {
@@ -1576,7 +1577,7 @@
       var pm = persOf(v, nm);
       (PORDER[side] || [0, 1, 2, 3]).forEach(function (i) {
         var pp = PERSONA[side][i];
-        var b = el("button", "pbtn" + (pm[i] ? " on" : "")); b.type = "button"; b.title = pp[1];
+        var b = el("button", "pbtn" + (pm[i] ? " on" : "") + (pp[0] === "Borrowedtime" ? " bt" : "")); b.type = "button"; b.title = pp[1];
         var im = new Image(); im.src = personaUrl(side, i); im.alt = pp[1]; b.appendChild(im);
         b.addEventListener("click", function () {
           var cur = persOf(v, nm), o = {};
