@@ -34,7 +34,7 @@
                font: inherit; font-size: 14px; cursor: pointer; }
   nav button.on { background: var(--panel2); border-color: #6f84ad; border-bottom-color: var(--panel2); font-weight: 700; }
   #tabs2 button { font-size: 13px; padding: 5px 12px; }
-  #simbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 16px; border-bottom: 1px solid var(--line); }
+  #simbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; padding: 0; }                    /* セット表示と同じ列の、右端 */
   #simbar[hidden] { display: none; }
   #simbar button { font: inherit; font-size: 13px; padding: 5px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel2); color: var(--text); cursor: pointer; }
   #simbar button.simgo { background: var(--gold); border-color: var(--gold); color: #05070b; font-weight: 700; }
@@ -391,8 +391,7 @@
   <button class="btn hbtn" id="themeBtn" type="button">🎨 デザイン</button><button class="btn hbtn" id="helpBtn" type="button">❓ 使い方</button><button class="btn hbtn" id="histBtn" type="button">🕘 履歴・端末</button><span id="status">接続中…</span>
 </header>
 <nav id="tabs1"></nav>
-<nav id="tabs2"></nav>
-<div id="simbar" hidden></div>
+<nav id="tabs2"><div id="simbar" hidden></div></nav>
 <div id="notice"></div>
 <main>
   <aside id="pal"></aside>
@@ -1297,6 +1296,7 @@
     var t2 = $("tabs2"); t2.textContent = "";
     var r = curRound();
     if (r) (r.sets || []).forEach(function (s) { t2.appendChild(tab(s.label, s.k === (curSet() || {}).k, function () { go(r.no, s.k); })); });
+    if (SIMBAR) t2.appendChild(SIMBAR);
     paintSimBar();
   }
   function go(tab, set) {
@@ -1621,7 +1621,7 @@
 
   // ───────── 描画 ─────────
   // ───────── BAN/PICKの順番の再生（大会のBAN/PICKと同じ順番で、いま選ぶ枠を光らせて見せる） ─────────
-  var SIM = { on: false, playing: false, i: 0, timer: null }, SIM_GAP = 2200;
+  var SIM = { on: false, playing: false, i: 0, timer: null }, SIM_GAP = 2200, SIMBAR = document.getElementById("simbar");        // 再生のボタンは、セット表示の列の右端（列を作り直すと外れるので、持っておいて、つけ直す）
   function simSteps() { var s = curSet(); return (s && s.st) || []; }
   function simLabel(i) {
     var x = simSteps()[i - 1], N = { h: "ハンター", s: "サバイバー", m: "マップ" };
@@ -1641,15 +1641,14 @@
   function simStart() { SIM.on = true; SIM.playing = true; SIM.i = 1; applySim(); paintSimBar(); simTimer(); }
   function simStep(d) { SIM.playing = false; simTimer(); SIM.i = Math.max(1, Math.min(simSteps().length, SIM.i + d)); applySim(); paintSimBar(); }
   function paintSimBar() {
-    var bar = $("simbar"); if (!bar) return;
+    var bar = SIMBAR; if (!bar) return;
     bar.textContent = "";
     var n = simSteps().length;
     if (!isRoundTab() || !n) { bar.hidden = true; if (SIM.on) { SIM.on = false; SIM.playing = false; clearInterval(SIM.timer); applySim(); } return; }
     bar.hidden = false;
     function btn(label, cls, fn) { var b = el("button", cls || "", label); b.type = "button"; b.addEventListener("click", fn); bar.appendChild(b); }
     if (!SIM.on) {
-      btn("▶ BAN/PICKを順番に再生", "simgo", simStart);
-      bar.appendChild(el("span", "simhint", "大会のBAN/PICKと同じ順番で、いま選ぶ枠を光らせて見せます"));
+      btn("▶ BAN/PICKを順番に再生", "simgo", simStart);                                  // ふだんは、ボタンだけ（説明の文は、出さない）
       return;
     }
     SIM.i = Math.max(1, Math.min(n, SIM.i));
@@ -1690,10 +1689,6 @@
   try { roleSort = localStorage.getItem("prep_role_sort") === "1"; } catch (e) { /* 無視 */ }
   function buildPalette() {
     var pal = $("pal"); pal.textContent = "";
-    var q = el("input"); q.type = "search"; q.placeholder = "キャラを探す"; q.value = palFilter;
-    q.addEventListener("input", function () { palFilter = q.value; fillPalette(); });
-    pal.appendChild(q);
-    pal.appendChild(el("div", "hint", "名札を右の枠へドラッグ（スマホは、名札をタップして選び、置きたい枠をタップ。特殊な表示の名札は、長押しで説明）。外すときはここへ戻すか ×。"));
     var bh = el("div", "palbox h"), gh = el("div", "grid"); gh.id = "palH"; bh.appendChild(gh);
     pal.appendChild(foldBtn("h", "ハンター", bh)); pal.appendChild(bh);
     var bs = el("div", "palbox s"), gs = el("div"); gs.id = "palS"; bs.appendChild(gs);
