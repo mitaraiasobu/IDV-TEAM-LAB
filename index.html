@@ -1611,7 +1611,6 @@
         var cm1 = parseCell(pr[2]), sl = $("psel-" + pr[1] + "-" + (cm1 ? cm1.base + cm1.c : pr[2])), pid = sl && sl.value ? sl.value : null, cs0 = curSet();
         if (pid && cs0 && node.querySelectorAll(".tag").length < (cm1 ? 1 : capOf(cs0, pr[1], pr[2]))) {
           HILITE = pid; fillPalette();
-          flash((((PLAYERS || []).filter(function (x) { return String(x.id) === String(pid); })[0]) || { n: "選手" }).n + "さんの得意キャラを、名札置き場で強調しています（Escで解除）。");
         }
       }
       return;
