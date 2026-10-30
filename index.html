@@ -120,7 +120,12 @@
   .pbtn.on { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 210, 63, .6); } .pbtn img { width: 36px; height: 36px; object-fit: contain; flex: none; }
   .sbtn.txt { width: auto; padding: 0 8px; font-size: 12px; } .sbtn.arm { border-color: var(--gold); color: var(--gold); } .sbtn[disabled] { opacity: .35; cursor: default; }
   .cellw { display: flex; flex-direction: column; gap: 3px; min-width: 0; } .cellw .psel { width: 100%; }
-  .rowctl { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 2px; } .rowctl .rn { font-size: 11px; color: var(--sub); white-space: nowrap; }
+  .rowctl { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 4px; } .rowctl .rn { font-size: 11px; color: var(--sub); white-space: nowrap; } .rowctl .rg { font-size: 16px; color: var(--gold); }
+  .edithint { font-size: 12px; color: var(--gold); padding: 2px 4px; }
+  .pgrid.edit > [data-row] { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; cursor: grab; position: relative; }
+  .pgrid.edit .cellw > *, .pgrid.edit .tag, .pgrid.edit .pbar, .pgrid.edit .gbrow * { pointer-events: none; }                      /* 編集中は、名札・人格・選手名・枠は、さわれない（行ごと、つかむ） */
+  .pgrid.edit > .rdrag { z-index: 20; opacity: .9; cursor: grabbing; outline: 2px solid var(--gold); background: rgba(255, 210, 63, .12); }
+  .pgrid.edit > .rtarget { outline: 2px dashed var(--gold); }
   .pgrid { display: grid; gap: 6px; align-items: start; overflow-x: auto; }                                                       /* 選手の縦列（必ず横に並ぶ）× 編成パターンの行（増やすと、下へ増える） */
   .pgrid .psel, .pgrid .pname { width: 100%; font: inherit; font-size: 12px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 4px; text-align: center; }
   .pgrid .pname { color: var(--sub); background: none; border-style: dashed; }
@@ -981,7 +986,7 @@
       var w = el("div", "warn");
       (phone ? ["名札を動かすとき：名札をタップして選び、そのあと、入れたい枠をもう一度タップします。",
                 "灰色・★・必須などの特殊な表示の名札：長押しすると、理由が出ます。",
-                "スロット：選手名は、枠ごとに選べます。「✎ 編成の編集」を押すと、編成（横の行）を、↑↓で並べかえたり、🗑で消したりできます。",
+                "スロット：選手名は、枠ごとに選べます。「✎ 編成の編集」を押すと、編成（横の行）の、どこをつかんでも、上下にスライドして並べかえられます。押したままにすると、「削除しますか？」と聞かれます（はい・いいえ）。編集中は、名札・人格・選手名は、さわれません。",
                 "人格：スロットの名札の下（「＋人格」）をタップするか、名札を長押しすると、人格を2つまで選べます（ただの相談用の目印です）。",
                 "キーボードのあるパソコンでは、Ctrl・Shift・Escのショートカットキーも使えます（「使い方（パソコン）」を見てください）。"]
              : ["名札を動かすとき：名札をつまんで（ドラッグして）、入れたい枠までスライドします。",
@@ -990,7 +995,7 @@
                 "【ショートカットキー】Shiftを押しながら名札をクリック：名札をいくつも選べます。まとめて動かしたり、コピーしたりできます。",
                 "【ショートカットキー】Esc：選んだ名札と、選手の強調を、解除します。",
                 "人格：スロットの名札の下（「＋人格」）をクリックするか、名札を長押し（0.6秒ほど押したままにする）すると、人格を2つまで選べます（ただの相談用の目印です）。",
-                "スロット：選手名は、枠ごとに選べます。「✎ 編成の編集」を押すと、編成（横の行）を、↑↓で並べかえたり、🗑で消したりできます。同じ行の中で名札を動かすと、入れ替わります。"])
+                "スロット：選手名は、枠ごとに選べます。「✎ 編成の編集」を押すと、編成（横の行）の、どこをつかんでも、上下にスライドして並べかえられます。押したままにすると、「削除しますか？」と聞かれます（はい・いいえ）。編集中は、名札・人格・選手名は、さわれません。同じ行の中で名札を動かすと、入れ替わります。"])
         .forEach(function (x) { w.appendChild(el("div", "", "・" + x)); });
       c.appendChild(w);
       c.appendChild(el("div", "rules", "この説明は、右上の「❓ 使い方」から、いつでも見られます。"));
@@ -1617,9 +1622,13 @@
       persPut(ops, v, nm, want.pers || {});
     }
   }
-  function rowMove(v, base, P, r, d) {                                               // 編成を、ひとつ上（-1）／下（+1）へ：選手も、いっしょに動く
-    var a = rowSnap(v, base, r, P), b = rowSnap(v, base, r + d, P), ops = {};
-    rowPut(ops, v, base, r, P, b); rowPut(ops, v, base, r + d, P, a);
+  function rowMoveTo(v, base, P, n, from, to) {                                      // 編成を、from行目から to行目へ動かす（間の編成は、ひとつずつずれる）：選手・人格も、いっしょに動く
+    if (from === to) return;
+    var snaps = [];
+    for (var k = 1; k <= n; k++) snaps.push(rowSnap(v, base, k, P));
+    snaps.splice(to - 1, 0, snaps.splice(from - 1, 1)[0]);
+    var ops = {}, lo = Math.min(from, to), hi = Math.max(from, to);
+    for (var k2 = lo; k2 <= hi; k2++) rowPut(ops, v, base, k2, P, snaps[k2 - 1]);
     write(ops);
   }
   function rowDelete(v, base, P, n, r) {                                             // 編成を消す：下の編成が、ひとつずつ上がる（行の数も、ひとつ減る）
@@ -1629,22 +1638,76 @@
     ops["sets/" + setId() + "/" + v + "/slots/" + base] = Math.max(1, n - 1);
     write(ops);
   }
-  function rowCtl(v, base, P, n, r) {                                                // 編成の編集モード：行の左に、↑↓🗑
+  function rowCtl(r) {                                                               // 編成の編集モード：行の左の見出し（行のどこをつかんでも、動かせる）
     var d = el("div", "rowctl");
+    d.setAttribute("data-row", r);
     d.appendChild(el("span", "rn", "編成" + r));
-    function mk(label, title, fn, off) { var x = el("button", "sbtn", label); x.type = "button"; x.title = title; x.disabled = !!off; x.addEventListener("click", fn); d.appendChild(x); return x; }
-    mk("↑", "この編成を、ひとつ上へ", function () { rowMove(v, base, P, r, -1); }, r === 1);
-    mk("↓", "この編成を、ひとつ下へ", function () { rowMove(v, base, P, r, 1); }, r === n);
-    var del = mk("🗑", "この編成を消す（下の編成が上がります）", function () {
-      if (del.getAttribute("data-arm") !== "1") {                                    // 1回目：「本当に消す」に変わる（3秒だけ）。もう一度押すと、消える
-        del.setAttribute("data-arm", "1"); del.textContent = "本当に消す"; del.classList.add("txt", "arm");
-        setTimeout(function () { if (del.parentNode) { del.removeAttribute("data-arm"); del.textContent = "🗑"; del.classList.remove("txt", "arm"); } }, 3000);
-        return;
-      }
-      rowDelete(v, base, P, n, r);
-    });
+    d.appendChild(el("span", "rg", "⇅"));
     return d;
   }
+  function askYesNo(text, onYes) {                                                   // はい・いいえ（ページの中の確認）
+    closePersona();
+    var ov = el("div", "pmod"), card = el("div", "pcard");
+    ov.id = "pmod";
+    card.appendChild(el("div", "pt", text));
+    var row = el("div", "row"), no = el("button", "btn go", "いいえ"), yes = el("button", "btn", "はい"); no.type = "button"; yes.type = "button";
+    no.addEventListener("click", closePersona);
+    yes.addEventListener("click", function () { closePersona(); onYes(); });
+    row.appendChild(no); row.appendChild(yes); card.appendChild(row);
+    ov.addEventListener("click", function (e) { if (e.target === ov) closePersona(); });
+    ov.appendChild(card); $("stage").appendChild(ov);
+    no.focus();
+  }
+  // 編成の編集モード：編成（行）のどこをつかんでも、上下にスライドして動かせる／押したままにすると、削除するかを聞く（名札・人格・選手名は、さわれない）
+  var RD = null;
+  function rowItems(grid, r) { return Array.prototype.filter.call(grid.children, function (e) { return e.getAttribute("data-row") === String(r); }); }
+  function rowRect(grid, r) {
+    var top = 1e9, bot = -1e9;
+    rowItems(grid, r).forEach(function (e) { var q = e.getBoundingClientRect(); top = Math.min(top, q.top); bot = Math.max(bot, q.bottom); });
+    return { top: top, bottom: bot };
+  }
+  document.addEventListener("pointerdown", function (e) {
+    if (e.button != null && e.button > 0) return;
+    var item = e.target.closest ? e.target.closest(".pgrid.edit > [data-row]") : null;
+    if (!item) return;
+    var grid = item.parentNode, r = Number(item.getAttribute("data-row"));
+    var st = RD = { grid: grid, r: r, n: Number(grid.getAttribute("data-n")), v: grid.getAttribute("data-v"), base: grid.getAttribute("data-base"), P: Number(grid.getAttribute("data-p")),
+                    y0: e.clientY, started: false, fired: false, items: rowItems(grid, r), rects: null, target: r, timer: null };
+    st.timer = setTimeout(function () {                                              // 押したままにした：削除するか、聞く
+      if (RD !== st || st.started) return;
+      st.fired = true;
+      askYesNo("編成" + st.r + " を削除しますか？（下の編成が上がります）", function () { rowDelete(st.v, st.base, st.P, st.n, st.r); });
+    }, 600);
+  }, true);
+  document.addEventListener("pointermove", function (e) {
+    var st = RD;
+    if (!st || st.fired) return;
+    var dy = e.clientY - st.y0;
+    if (!st.started) {
+      if (Math.abs(dy) < 8) return;
+      st.started = true; clearTimeout(st.timer);
+      st.rects = []; for (var k = 1; k <= st.n; k++) st.rects.push(rowRect(st.grid, k));
+      st.items.forEach(function (it) { it.classList.add("rdrag"); });
+    }
+    st.items.forEach(function (it) { it.style.transform = "translateY(" + dy + "px)"; });
+    var me = st.rects[st.r - 1], cy = (me.top + me.bottom) / 2 + dy, best = 1e9, tgt = st.r;       // 動かしている編成の真ん中に、いちばん近い行へ
+    st.rects.forEach(function (rc, i) { var dd = Math.abs(cy - (rc.top + rc.bottom) / 2); if (dd < best) { best = dd; tgt = i + 1; } });
+    if (tgt !== st.target) {
+      st.target = tgt;
+      Array.prototype.forEach.call(st.grid.querySelectorAll(".rtarget"), function (x) { x.classList.remove("rtarget"); });
+      if (tgt !== st.r) rowItems(st.grid, tgt).forEach(function (x) { x.classList.add("rtarget"); });
+    }
+  }, true);
+  function rdEnd(cancelled) {
+    var st = RD;
+    if (!st) return;
+    RD = null; clearTimeout(st.timer);
+    st.items.forEach(function (it) { it.style.transform = ""; it.classList.remove("rdrag"); });
+    Array.prototype.forEach.call(st.grid.querySelectorAll(".rtarget"), function (x) { x.classList.remove("rtarget"); });
+    if (st.started && !cancelled && !st.fired && st.target !== st.r) rowMoveTo(st.v, st.base, st.P, st.n, st.r, st.target);
+  }
+  document.addEventListener("pointerup", function () { rdEnd(false); }, true);
+  document.addEventListener("pointercancel", function () { rdEnd(true); }, true);
   var SLOTSIG = "";
   function slotSig() { return JSON.stringify([setId(), slotMode(), slotCount("s", "pick"), slotCount("s", "epick"), slotCount("h", "pick"), slotCount("h", "epick")]); }
   function dropPath(spec) {
@@ -2265,9 +2328,9 @@
               minus.addEventListener("click", function () { var k = slotCount(v, b), o = {}; if (k <= 1) return; o["sets/" + setId() + "/" + v + "/slots/" + b] = k - 1; for (var c0 = 1; c0 <= cap; c0++) o["sets/" + setId() + "/" + v + "/" + cellName(b, k, c0)] = null; write(o); });
               sc.appendChild(minus);
             }
-            if (n > 1) {
+            if (n > 1 || ROWEDIT) {
               var ed = el("button", "sbtn txt" + (ROWEDIT ? " arm" : ""), ROWEDIT ? "✔ 編集を終える" : "✎ 編成の編集"); ed.type = "button";
-              ed.title = "編成（横の行）を、ひとつずつ、並べかえたり、消したりするモード";
+              ed.title = "編成（横の行）を、スライドして並べかえたり、押したままにして消したりするモード";
               ed.addEventListener("click", function () { ROWEDIT = !ROWEDIT; buildWork(); fill(); });
               sc.appendChild(ed);
             }
@@ -2277,26 +2340,34 @@
           if (useSlots) {
             var cols = el("div", "pgrid"), edit = ROWEDIT && n > 1;                     // 横：その編成の、選手ごとの枠（選手名は、枠ごとに選べる）／縦：編成パターン
             cols.style.gridTemplateColumns = (edit ? "auto " : "") + "repeat(" + cap + ", minmax(66px, 1fr))";
+            if (edit) {
+              cols.classList.add("edit");
+              cols.setAttribute("data-v", v); cols.setAttribute("data-base", b); cols.setAttribute("data-p", cap); cols.setAttribute("data-n", n);
+              var eh = el("div", "edithint", "編成の編集：編成（行）のどこをつかんでも、上下にスライドして並べかえられます。押したままにすると、削除するか聞かれます。名札・人格・選手名は、編集中はさわれません。");
+              eh.style.gridColumn = "1 / -1"; cols.appendChild(eh);
+            }
             if (b === "epick") {                                                         // 相手の枠：見出しだけ
               if (edit) cols.appendChild(el("div"));
               for (var c1 = 1; c1 <= cap; c1++) cols.appendChild(el("div", "pname", "相手" + c1));
             }
             var nums = blockNums(s, v, b);
             for (var r1 = 1; r1 <= n; r1++) {
-              if (edit) cols.appendChild(rowCtl(v, b, cap, n, r1));
+              if (edit) cols.appendChild(rowCtl(r1));
               for (var c2 = 1; c2 <= cap; c2++) {
                 var nm = cellName(b, r1, c2), d = el("div", "drop col cell"); d.id = "blk-" + v + "-" + nm;
                 if (nums[c2 - 1]) d.setAttribute("data-num", circ(nums[c2 - 1]));
                 d.setAttribute("data-drop", "set:" + v + ":" + nm); d.setAttribute("data-hint", n > 1 ? "編成" + r1 : "ここに名札");
                 clickDrop("set:" + v + ":" + nm, d);
+                var wrap = el("div", "cellw"); wrap.setAttribute("data-row", r1);
                 if (b === "pick") {                                                      // 自陣営：この枠の選手を選ぶ（行ごと・枠ごとに、別の選手にできる）
-                  var wrap = el("div", "cellw"), sl = el("select", "psel"); sl.id = "psel-" + v + "-" + nm;
+                  var sl = el("select", "psel"); sl.id = "psel-" + v + "-" + nm;
                   (function (rr, cc, s0) {
                     s0.addEventListener("change", function () { var o = {}; plWrite(o, v, b, rr, cc, s0.value ? Number(s0.value) : 0); writeQuiet(o); HILITE = null; fillPalette(); });
                   })(r1, c2, sl);
-                  wrap.appendChild(sl); wrap.appendChild(d); cols.appendChild(wrap);
-                } else cols.appendChild(d);
-                if (c2 === cap && b === "pick") { var gr = el("div", "gbrow"); gr.id = "gbr-" + v + "-" + r1; gr.hidden = true; gr.style.gridColumn = "1 / -1"; cols.appendChild(gr); }          // その編成のGLOBAL BAN（小さな顔だけ）
+                  wrap.appendChild(sl);
+                }
+                wrap.appendChild(d); cols.appendChild(wrap);
+                if (c2 === cap && b === "pick") { var gr = el("div", "gbrow"); gr.id = "gbr-" + v + "-" + r1; gr.hidden = true; gr.style.gridColumn = "1 / -1"; gr.setAttribute("data-row", r1); cols.appendChild(gr); }          // その編成のGLOBAL BAN（小さな顔だけ）
               }
             }
             blk.appendChild(cols);
