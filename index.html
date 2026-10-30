@@ -1530,6 +1530,7 @@
   }
   var PERSONA = { s: [["Borrowedtime", "Borrowed Time"], ["FlywheelEffect", "Flywheel Effect"], ["Knee_Jerk_Reflex", "Knee-Jerk Reflex"], ["TideTurner", "Tide Turner"]],
                   h: [["ConfinedSpace", "Confined Space"], ["Detention", "Detention"], ["Insolence", "Insolence"], ["TrumpCard", "Trump Card"]] };      // 人格（サバイバー4つ・ハンター4つ）。1つのキャラに、2つまで
+  var PORDER = { s: [0, 3, 2, 1], h: [0, 1, 2, 3] };                                 // 並べる順（保存する番号は、そのまま）：サバイバーは、左から Borrowed Time・Tide Turner・Knee-Jerk Reflex・Flywheel Effect
   function personaUrl(side, i) { return imgUrl("assets/persona/" + (side === "h" ? "hunter" : "survivor") + "/" + PERSONA[side][i][0] + ".png"); }
   function persPath(v, nm) { return "sets/" + setId() + "/" + v + "/pers/" + nm; }
   function persOf(v, nm) {                                                           // この枠の、選んである人格：{番号: 時刻}
@@ -1552,7 +1553,7 @@
   }
   function personaBar(v, nm, charId) {                                               // 名札の下：選んである人格（なければ、「＋人格」）。タップで、選ぶ
     var bar = el("div", "pbar"), pm = persOf(v, nm), side = CH[charId] ? CH[charId].f : "s";
-    var idx = Object.keys(pm).sort(function (a, b) { return pm[a] - pm[b]; });
+    var ord = PORDER[side] || [0, 1, 2, 3], idx = Object.keys(pm).sort(function (a, b) { return ord.indexOf(Number(a)) - ord.indexOf(Number(b)); });          // 選んだ順ではなく、決まった並び（左から）で出す
     bar.title = "タップして、人格を選ぶ（2つまで）";
     if (!idx.length) bar.appendChild(el("span", "padd", "＋人格"));
     else idx.forEach(function (i) { if (!PERSONA[side] || !PERSONA[side][i]) return; var im = new Image(); im.src = personaUrl(side, i); im.alt = PERSONA[side][i][1]; im.title = PERSONA[side][i][1]; bar.appendChild(im); });
@@ -1573,7 +1574,8 @@
     function paint() {
       grid.textContent = "";
       var pm = persOf(v, nm);
-      PERSONA[side].forEach(function (pp, i) {
+      (PORDER[side] || [0, 1, 2, 3]).forEach(function (i) {
+        var pp = PERSONA[side][i];
         var b = el("button", "pbtn" + (pm[i] ? " on" : "")); b.type = "button"; b.title = pp[1];
         var im = new Image(); im.src = personaUrl(side, i); im.alt = pp[1]; b.appendChild(im);
         b.addEventListener("click", function () {
