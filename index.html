@@ -109,6 +109,9 @@
   .slotctl .sn { color: var(--text); font-size: 13px; }
   .sbtn { appearance: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 6px; width: 24px; height: 22px; line-height: 1; font-size: 14px; cursor: pointer; padding: 0; }
   .sbtn:hover { border-color: var(--ac); }
+  .sbtn.txt { width: auto; padding: 0 8px; font-size: 12px; } .sbtn.arm { border-color: var(--gold); color: var(--gold); } .sbtn[disabled] { opacity: .35; cursor: default; }
+  .cellw { display: flex; flex-direction: column; gap: 3px; min-width: 0; } .cellw .psel { width: 100%; }
+  .rowctl { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 2px; } .rowctl .rn { font-size: 11px; color: var(--sub); white-space: nowrap; }
   .pgrid { display: grid; gap: 6px; align-items: start; overflow-x: auto; }                                                       /* 選手の縦列（必ず横に並ぶ）× 編成パターンの行（増やすと、下へ増える） */
   .pgrid .psel, .pgrid .pname { width: 100%; font: inherit; font-size: 12px; background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 4px; text-align: center; }
   .pgrid .pname { color: var(--sub); background: none; border-style: dashed; }
@@ -968,9 +971,15 @@
       brand(c, "使い方（" + (phone ? "スマホ" : "パソコン") + "）");
       var w = el("div", "warn");
       (phone ? ["名札を動かすとき：名札をタップして選び、そのあと、入れたい枠をもう一度タップします。",
-                "灰色・★・必須などの特殊な表示の名札：長押しすると、理由が出ます。"]
+                "灰色・★・必須などの特殊な表示の名札：長押しすると、理由が出ます。",
+                "スロット：選手名は、枠ごとに選べます。「✎ 編成の編集」を押すと、編成（横の行）を、↑↓で並べかえたり、🗑で消したりできます。",
+                "キーボードのあるパソコンでは、Ctrl・Shift・Escのショートカットキーも使えます（「使い方（パソコン）」を見てください）。"]
              : ["名札を動かすとき：名札をつまんで（ドラッグして）、入れたい枠までスライドします。",
-                "灰色・★・必須などの特殊な表示の名札：クリックすると、理由が出ます。"])
+                "灰色・★・必須などの特殊な表示の名札：クリックすると、理由が出ます。",
+                "【ショートカットキー】Ctrl（Macは⌘）を押しながら枠に置く：名札をコピーします（元の枠にも残ります）。",
+                "【ショートカットキー】Shiftを押しながら名札をクリック：名札をいくつも選べます。まとめて動かしたり、コピーしたりできます。",
+                "【ショートカットキー】Esc：選んだ名札と、選手の強調を、解除します。",
+                "スロット：選手名は、枠ごとに選べます。「✎ 編成の編集」を押すと、編成（横の行）を、↑↓で並べかえたり、🗑で消したりできます。同じ行の中で名札を動かすと、入れ替わります。"])
         .forEach(function (x) { w.appendChild(el("div", "", "・" + x)); });
       c.appendChild(w);
       c.appendChild(el("div", "rules", "この説明は、右上の「❓ 使い方」から、いつでも見られます。"));
@@ -1301,7 +1310,7 @@
   }
   function go(tab, set) {
     if (typeof simStop === "function") simStop();                                       // タブを変えたら、再生はやめる
-    MAPSEL = null;
+    MAPSEL = null; ROWEDIT = false;
     cur.tab = tab;
     if (set) cur.set = set; else if (isRoundTab()) { var r = curRound(); cur.set = r && r.sets[0] ? r.sets[0].k : "1"; }
     try { sessionStorage.setItem("lab_tab_" + ID, JSON.stringify(cur)); } catch (e) { /* 無視 */ }
@@ -1500,6 +1509,62 @@
     for (var c = 1; c <= P; c++) Object.keys(obj(stv[cellName(base, r, c)])).forEach(function (k) { if (obj(stv[cellName(base, r, c)])[k] && CH[Number(k)]) m[Number(k)] = true; });
     return m;
   }
+  var ROWEDIT = false;                                                               // 編成の編集モード（行の入れ替え・削除。この端末の画面だけ）
+  function plOf(stv, base, r, c) {                                                   // 枠（r行・c列）の選手：その枠で決めた選手。決めていなければ、前の形式（列ごとに決めた選手）
+    var pl = obj(obj(stv).pl), v = pl[cellName(base, r, c)];
+    if (v == null) v = pl[base + c];
+    return Number(v) > 0 ? Number(v) : 0;
+  }
+  function plWrite(ops, v, base, r, c, pid) {                                        // 枠の選手を書く。空にするとき、前の形式の列の選手が残っていれば、0（空）と書く
+    var stv = obj(obj(setState())[v]);
+    ops["sets/" + setId() + "/" + v + "/pl/" + cellName(base, r, c)] = pid > 0 ? pid : (obj(stv.pl)[base + c] ? 0 : null);
+  }
+  function rowSnap(v, base, r, P) {                                                  // r行目（1つの編成）の中身：枠ごとのキャラと選手
+    var stv = obj(obj(setState())[v]), out = [];
+    for (var c = 1; c <= P; c++) {
+      var m = {}, src = obj(stv[cellName(base, r, c)]);
+      Object.keys(src).forEach(function (k) { if (src[k]) m[k] = src[k]; });
+      out.push({ map: m, pl: plOf(stv, base, r, c) });
+    }
+    return out;
+  }
+  function rowPut(ops, v, base, r, P, snap) {                                        // r行目を、snap の中身にする（いまの中身は、置き換える）
+    var stv = obj(obj(setState())[v]), sid = setId();
+    for (var c = 1; c <= P; c++) {
+      var nm = cellName(base, r, c), path = "sets/" + sid + "/" + v + "/" + nm, cur = obj(stv[nm]), want = snap[c - 1];
+      Object.keys(cur).forEach(function (k) { if (!want.map[k]) ops[path + "/" + k] = null; });
+      Object.keys(want.map).forEach(function (k) { ops[path + "/" + k] = want.map[k]; });
+      plWrite(ops, v, base, r, c, want.pl);
+    }
+  }
+  function rowMove(v, base, P, r, d) {                                               // 編成を、ひとつ上（-1）／下（+1）へ：選手も、いっしょに動く
+    var a = rowSnap(v, base, r, P), b = rowSnap(v, base, r + d, P), ops = {};
+    rowPut(ops, v, base, r, P, b); rowPut(ops, v, base, r + d, P, a);
+    write(ops);
+  }
+  function rowDelete(v, base, P, n, r) {                                             // 編成を消す：下の編成が、ひとつずつ上がる（行の数も、ひとつ減る）
+    var ops = {}, empty = [];
+    for (var c = 0; c < P; c++) empty.push({ map: {}, pl: 0 });
+    for (var k = r; k <= n; k++) rowPut(ops, v, base, k, P, k < n ? rowSnap(v, base, k + 1, P) : empty);
+    ops["sets/" + setId() + "/" + v + "/slots/" + base] = Math.max(1, n - 1);
+    write(ops);
+  }
+  function rowCtl(v, base, P, n, r) {                                                // 編成の編集モード：行の左に、↑↓🗑
+    var d = el("div", "rowctl");
+    d.appendChild(el("span", "rn", "編成" + r));
+    function mk(label, title, fn, off) { var x = el("button", "sbtn", label); x.type = "button"; x.title = title; x.disabled = !!off; x.addEventListener("click", fn); d.appendChild(x); return x; }
+    mk("↑", "この編成を、ひとつ上へ", function () { rowMove(v, base, P, r, -1); }, r === 1);
+    mk("↓", "この編成を、ひとつ下へ", function () { rowMove(v, base, P, r, 1); }, r === n);
+    var del = mk("🗑", "この編成を消す（下の編成が上がります）", function () {
+      if (del.getAttribute("data-arm") !== "1") {                                    // 1回目：「本当に消す」に変わる（3秒だけ）。もう一度押すと、消える
+        del.setAttribute("data-arm", "1"); del.textContent = "本当に消す"; del.classList.add("txt", "arm");
+        setTimeout(function () { if (del.parentNode) { del.removeAttribute("data-arm"); del.textContent = "🗑"; del.classList.remove("txt", "arm"); } }, 3000);
+        return;
+      }
+      rowDelete(v, base, P, n, r);
+    });
+    return d;
+  }
   var SLOTSIG = "";
   function slotSig() { return JSON.stringify([setId(), slotMode(), slotCount("s", "pick"), slotCount("s", "epick"), slotCount("h", "pick"), slotCount("h", "epick")]); }
   function dropPath(spec) {
@@ -1577,8 +1642,16 @@
   function dropCell(items, parts, path, copy) {                                      // スロットの枠：1つの枠に、キャラは1人（入っていたら、置き換える）
     var s0 = curSet(), f = parts[1], cm = parseCell(parts[2]), P = capOf(s0, f, cm.base), it = items[0], id = it.ch.id, ops = {}, msg = null;
     var old = pathOfFrom(it.from, id), cur = obj(getAt(path));
+    var sp0 = it.from && it.from.spec ? String(it.from.spec).split(":") : [], scm = sp0[0] === "set" && sp0[1] === f ? parseCell(sp0[2]) : null;
+    var sameRow = !!(scm && old && !copy && scm.base === cm.base && scm.r === cm.r);        // 同じ編成（同じ行）の中で、別の枠へ動かす
     if (items.length > 1) msg = "1つのスロットには、キャラは1人です。";
     else if (it.ch.f !== blockFaction(f, cm.base)) msg = (f === "s" ? "サバイバー" : "ハンター") + "目線の" + BLK[cm.base] + "には" + (blockFaction(f, cm.base) === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。";
+    else if (sameRow) {                                                              // 行の顔ぶれは変わらないので、確かめない。動かし先に入っていたキャラは、元の枠と入れ替える
+      var srcPath = dropPath(it.from.spec);
+      Object.keys(cur).forEach(function (k) { ops[path + "/" + k] = null; ops[srcPath + "/" + k] = Date.now(); });
+      ops[path + "/" + id] = Date.now();
+      ops[old] = null;
+    }
     else if (old !== path + "/" + id) {
       var row = blockPickedMap(s0, f, parts[2]), placed = rowPlaced(f, cm.base, cm.r, P), gb = {}, hd = hardOf(s0);
       Object.keys(cur).forEach(function (k) { if (!hd[k]) delete row[k]; delete placed[k]; });          // 置き換えるので、いまの中身は数えない
@@ -1608,7 +1681,7 @@
     if (!SELS.length) {                                                              // 何も持ち上げていないとき：選手名が入っているスロットで、まだ空きがあれば、その選手の得意キャラを、名札置き場で強調する
       var pr = spec.split(":");
       if (pr[0] === "set" && baseB(pr[2]) === "pick") {
-        var cm1 = parseCell(pr[2]), sl = $("psel-" + pr[1] + "-" + (cm1 ? cm1.base + cm1.c : pr[2])), pid = sl && sl.value ? sl.value : null, cs0 = curSet();
+        var cm1 = parseCell(pr[2]), sl = $("psel-" + pr[1] + "-" + pr[2]), pid = sl && sl.value ? sl.value : null, cs0 = curSet();
         if (pid && cs0 && node.querySelectorAll(".tag").length < (cm1 ? 1 : capOf(cs0, pr[1], pr[2]))) {
           HILITE = pid; fillPalette();
         }
@@ -2108,27 +2181,39 @@
               minus.addEventListener("click", function () { var k = slotCount(v, b), o = {}; if (k <= 1) return; o["sets/" + setId() + "/" + v + "/slots/" + b] = k - 1; for (var c0 = 1; c0 <= cap; c0++) o["sets/" + setId() + "/" + v + "/" + cellName(b, k, c0)] = null; write(o); });
               sc.appendChild(minus);
             }
+            if (n > 1) {
+              var ed = el("button", "sbtn txt" + (ROWEDIT ? " arm" : ""), ROWEDIT ? "✔ 編集を終える" : "✎ 編成の編集"); ed.type = "button";
+              ed.title = "編成（横の行）を、ひとつずつ、並べかえたり、消したりするモード";
+              ed.addEventListener("click", function () { ROWEDIT = !ROWEDIT; buildWork(); fill(); });
+              sc.appendChild(ed);
+            }
             h.appendChild(sc);
           }
           var cnt = el("span", "cnt"); cnt.id = "cnt-" + v + "-" + b; h.appendChild(cnt); blk.appendChild(h);
           if (useSlots) {
-            var cols = el("div", "pgrid");                                               // 上：選手（縦の列は、その選手のもの。必ず横に並ぶ）／その下：スロット（編成パターン）の行
-            cols.style.gridTemplateColumns = "repeat(" + cap + ", minmax(66px, 1fr))";
-            for (var c1 = 1; c1 <= cap; c1++) (function (c) {
-              if (b === "pick") {                                                        // 自陣営：この列の選手を選ぶ（ずっとその選手の列）
-                var sl = el("select", "psel"); sl.id = "psel-" + v + "-" + b + c;
-                sl.addEventListener("change", function () { var o = {}; o["sets/" + setId() + "/" + v + "/pl/" + b + c] = sl.value ? Number(sl.value) : null; writeQuiet(o); HILITE = null; fillPalette(); });
-                cols.appendChild(sl);
-              } else cols.appendChild(el("div", "pname", "相手" + c));
-            })(c1);
+            var cols = el("div", "pgrid"), edit = ROWEDIT && n > 1;                     // 横：その編成の、選手ごとの枠（選手名は、枠ごとに選べる）／縦：編成パターン
+            cols.style.gridTemplateColumns = (edit ? "auto " : "") + "repeat(" + cap + ", minmax(66px, 1fr))";
+            if (b === "epick") {                                                         // 相手の枠：見出しだけ
+              if (edit) cols.appendChild(el("div"));
+              for (var c1 = 1; c1 <= cap; c1++) cols.appendChild(el("div", "pname", "相手" + c1));
+            }
             var nums = blockNums(s, v, b);
-            for (var r1 = 1; r1 <= n; r1++) for (var c2 = 1; c2 <= cap; c2++) {
-              var nm = cellName(b, r1, c2), d = el("div", "drop col cell"); d.id = "blk-" + v + "-" + nm;
-              if (nums[c2 - 1]) d.setAttribute("data-num", circ(nums[c2 - 1]));
-              d.setAttribute("data-drop", "set:" + v + ":" + nm); d.setAttribute("data-hint", n > 1 ? "編成" + r1 : "ここに名札");
-              clickDrop("set:" + v + ":" + nm, d);
-              cols.appendChild(d);
-              if (c2 === cap && b === "pick") { var gr = el("div", "gbrow"); gr.id = "gbr-" + v + "-" + r1; gr.hidden = true; gr.style.gridColumn = "1 / -1"; cols.appendChild(gr); }          // その編成のGLOBAL BAN（小さな顔だけ）
+            for (var r1 = 1; r1 <= n; r1++) {
+              if (edit) cols.appendChild(rowCtl(v, b, cap, n, r1));
+              for (var c2 = 1; c2 <= cap; c2++) {
+                var nm = cellName(b, r1, c2), d = el("div", "drop col cell"); d.id = "blk-" + v + "-" + nm;
+                if (nums[c2 - 1]) d.setAttribute("data-num", circ(nums[c2 - 1]));
+                d.setAttribute("data-drop", "set:" + v + ":" + nm); d.setAttribute("data-hint", n > 1 ? "編成" + r1 : "ここに名札");
+                clickDrop("set:" + v + ":" + nm, d);
+                if (b === "pick") {                                                      // 自陣営：この枠の選手を選ぶ（行ごと・枠ごとに、別の選手にできる）
+                  var wrap = el("div", "cellw"), sl = el("select", "psel"); sl.id = "psel-" + v + "-" + nm;
+                  (function (rr, cc, s0) {
+                    s0.addEventListener("change", function () { var o = {}; plWrite(o, v, b, rr, cc, s0.value ? Number(s0.value) : 0); writeQuiet(o); HILITE = null; fillPalette(); });
+                  })(r1, c2, sl);
+                  wrap.appendChild(sl); wrap.appendChild(d); cols.appendChild(wrap);
+                } else cols.appendChild(d);
+                if (c2 === cap && b === "pick") { var gr = el("div", "gbrow"); gr.id = "gbr-" + v + "-" + r1; gr.hidden = true; gr.style.gridColumn = "1 / -1"; cols.appendChild(gr); }          // その編成のGLOBAL BAN（小さな顔だけ）
+              }
             }
             blk.appendChild(cols);
           } else {
@@ -2247,9 +2332,9 @@
                   gr2.appendChild(fb);
                 });
               }
-              if (base === "pick") for (var c3 = 1; c3 <= cap; c3++) {
-                var sl3 = $("psel-" + f + "-" + base + c3);                              // この列の選手名
-                if (sl3) { fillSel(sl3, f); sl3.value = String(obj(obj(st[f]).pl)[base + c3] || ""); }
+              if (base === "pick") for (var rs = 1; rs <= slotCount(f, base); rs++) for (var c3 = 1; c3 <= cap; c3++) {
+                var sl3 = $("psel-" + f + "-" + cellName(base, rs, c3));                 // この枠の選手名（枠ごと）
+                if (sl3) { fillSel(sl3, f); sl3.value = String(plOf(st[f], base, rs, c3) || ""); }
               }
               var c4 = $("cnt-" + f + "-" + base);
               if (c4) { c4.textContent = ""; c4.className = "cnt"; }
