@@ -109,6 +109,15 @@
   .slotctl .sn { color: var(--text); font-size: 13px; }
   .sbtn { appearance: none; border: 1px solid var(--line); background: var(--panel2); color: var(--text); border-radius: 6px; width: 24px; height: 22px; line-height: 1; font-size: 14px; cursor: pointer; padding: 0; }
   .sbtn:hover { border-color: var(--ac); }
+  .pbar { display: flex; justify-content: center; align-items: center; gap: 2px; min-height: 20px; width: 100%; cursor: pointer; margin-top: 2px; }
+  .pbar img { width: 20px; height: 20px; object-fit: contain; } .pbar .padd { font-size: 10px; color: var(--sub); opacity: .55; }
+  .pbar:hover .padd { opacity: 1; color: var(--ac); }
+  .pmod { position: absolute; inset: 0; z-index: 60; background: rgba(0, 0, 0, .55); display: flex; align-items: center; justify-content: center; }
+  .pcard { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; max-width: 92%; width: 420px; display: flex; flex-direction: column; gap: 10px; }
+  .pcard .pt { font-weight: 800; font-size: 16px; } .pcard .pn { font-size: 12px; color: var(--sub); } .pcard .pwhy { font-size: 12px; color: var(--gold); }
+  .pgr2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .pbtn { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; border: 2px solid var(--line); background: var(--panel); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+  .pbtn.on { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 210, 63, .6); } .pbtn img { width: 36px; height: 36px; object-fit: contain; flex: none; }
   .sbtn.txt { width: auto; padding: 0 8px; font-size: 12px; } .sbtn.arm { border-color: var(--gold); color: var(--gold); } .sbtn[disabled] { opacity: .35; cursor: default; }
   .cellw { display: flex; flex-direction: column; gap: 3px; min-width: 0; } .cellw .psel { width: 100%; }
   .rowctl { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 2px; } .rowctl .rn { font-size: 11px; color: var(--sub); white-space: nowrap; }
@@ -973,12 +982,14 @@
       (phone ? ["名札を動かすとき：名札をタップして選び、そのあと、入れたい枠をもう一度タップします。",
                 "灰色・★・必須などの特殊な表示の名札：長押しすると、理由が出ます。",
                 "スロット：選手名は、枠ごとに選べます。「✎ 編成の編集」を押すと、編成（横の行）を、↑↓で並べかえたり、🗑で消したりできます。",
+                "人格：スロットの名札の下（「＋人格」）をタップするか、名札を長押しすると、人格を2つまで選べます（ただの相談用の目印です）。",
                 "キーボードのあるパソコンでは、Ctrl・Shift・Escのショートカットキーも使えます（「使い方（パソコン）」を見てください）。"]
              : ["名札を動かすとき：名札をつまんで（ドラッグして）、入れたい枠までスライドします。",
                 "灰色・★・必須などの特殊な表示の名札：クリックすると、理由が出ます。",
                 "【ショートカットキー】Ctrl（Macは⌘）を押しながら枠に置く：名札をコピーします（元の枠にも残ります）。",
                 "【ショートカットキー】Shiftを押しながら名札をクリック：名札をいくつも選べます。まとめて動かしたり、コピーしたりできます。",
                 "【ショートカットキー】Esc：選んだ名札と、選手の強調を、解除します。",
+                "人格：スロットの名札の下（「＋人格」）をクリックするか、名札を長押し（0.6秒ほど押したままにする）すると、人格を2つまで選べます（ただの相談用の目印です）。",
                 "スロット：選手名は、枠ごとに選べます。「✎ 編成の編集」を押すと、編成（横の行）を、↑↓で並べかえたり、🗑で消したりできます。同じ行の中で名札を動かすと、入れ替わります。"])
         .forEach(function (x) { w.appendChild(el("div", "", "・" + x)); });
       c.appendChild(w);
@@ -1140,6 +1151,7 @@
       var s = r ? (r.sets || []).filter(function (x) { return x.k === sid[1]; })[0] : null, where = (r ? r.name : "") + (s ? " " + s.label : "");
       if (p[2] === "memo") return where + "：メモを書き換えた";
       if (p[3] === "memo") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + "のメモを書き換えた";
+      if (p[3] === "pers") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " の人格を変えた";
       if (p[3] === "slots") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " " + (BLK[p[4]] || "PICK") + "のスロットの数を変えた";
       if (/^map\d+$/.test(p[3] || "")) return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " マップを" + (add ? "選んだ" : "外した");
       if (p[3] === "pl") return where + "：" + (p[2] === "h" ? "ハンター目線" : "サバイバー目線") + " PICKの選手名を変えた";
@@ -1330,7 +1342,9 @@
       var st = { ch: ch, from: from, x: e.clientX, y: e.clientY, cx: e.clientX, cy: e.clientY, started: false, node: node, pid: e.pointerId, touch: e.pointerType === "touch", timer: null, ghost: null, shift: !!e.shiftKey, group: null };
       drag = st;
       hideWhy();
-      if (st.touch && node._why && node._why.length) st.timer = setTimeout(function () { if (drag === st) { st.explained = true; showWhy(node); } }, 450);       // スマホ：長押しで、特殊な名札の説明（動かすのは、タップして選び、置く枠をタップ）
+      var pcell = cellOfFrom(from);
+      if (pcell) st.timer = setTimeout(function () { if (drag === st && !st.started) { st.explained = true; hideWhy(); openPersona(pcell.v, pcell.nm, ch.id, node._why); } }, st.touch ? 500 : 650);          // スロットの名札を長押し：人格を選ぶ（特殊な名札の説明は、その中に出す）
+      else if (st.touch && node._why && node._why.length) st.timer = setTimeout(function () { if (drag === st) { st.explained = true; showWhy(node); } }, 450);       // スマホ：長押しで、特殊な名札の説明（動かすのは、タップして選び、置く枠をタップ）
     });
     node.addEventListener("contextmenu", function (e) { e.preventDefault(); });                // 長押しで、ブラウザのメニューが出ないように
   }
@@ -1509,6 +1523,71 @@
     for (var c = 1; c <= P; c++) Object.keys(obj(stv[cellName(base, r, c)])).forEach(function (k) { if (obj(stv[cellName(base, r, c)])[k] && CH[Number(k)]) m[Number(k)] = true; });
     return m;
   }
+  var PERSONA = { s: [["Borrowedtime", "Borrowed Time"], ["FlywheelEffect", "Flywheel Effect"], ["Knee_Jerk_Reflex", "Knee-Jerk Reflex"], ["TideTurner", "Tide Turner"]],
+                  h: [["ConfinedSpace", "Confined Space"], ["Detention", "Detention"], ["Insolence", "Insolence"], ["TrumpCard", "Trump Card"]] };      // 人格（サバイバー4つ・ハンター4つ）。1つのキャラに、2つまで
+  function personaUrl(side, i) { return imgUrl("assets/persona/" + (side === "h" ? "hunter" : "survivor") + "/" + PERSONA[side][i][0] + ".png"); }
+  function persPath(v, nm) { return "sets/" + setId() + "/" + v + "/pers/" + nm; }
+  function persOf(v, nm) {                                                           // この枠の、選んである人格：{番号: 時刻}
+    var src = obj(obj(obj(obj(setState())[v]).pers)[nm]), out = {};
+    Object.keys(src).forEach(function (k) { if (src[k]) out[k] = src[k]; });
+    return out;
+  }
+  function persPut(ops, v, nm, want) {                                               // この枠の人格を、want にする（親の項目は消さず、1つずつ書く）
+    var cur = persOf(v, nm), base = persPath(v, nm);
+    Object.keys(cur).forEach(function (k) { if (!want[k]) ops[base + "/" + k] = null; });
+    Object.keys(want).forEach(function (k) { ops[base + "/" + k] = want[k]; });
+  }
+  function clearPersOf(ops, from) {                                                  // 名札が、スロットの枠から出ていくとき：その枠の人格も、消す
+    var fp = from && from.spec ? String(from.spec).split(":") : [];
+    if (fp[0] === "set" && parseCell(fp[2])) persPut(ops, fp[1], fp[2], {});
+  }
+  function cellOfFrom(from) {                                                        // スロットの枠にある名札なら、{v, nm}
+    var fp = from && from.kind === "blk" && from.spec ? String(from.spec).split(":") : [];
+    return fp[0] === "set" && parseCell(fp[2]) ? { v: fp[1], nm: fp[2] } : null;
+  }
+  function personaBar(v, nm, charId) {                                               // 名札の下：選んである人格（なければ、「＋人格」）。タップで、選ぶ
+    var bar = el("div", "pbar"), pm = persOf(v, nm), side = CH[charId] ? CH[charId].f : "s";
+    var idx = Object.keys(pm).sort(function (a, b) { return pm[a] - pm[b]; });
+    bar.title = "タップして、人格を選ぶ（2つまで）";
+    if (!idx.length) bar.appendChild(el("span", "padd", "＋人格"));
+    else idx.forEach(function (i) { if (!PERSONA[side] || !PERSONA[side][i]) return; var im = new Image(); im.src = personaUrl(side, i); im.alt = PERSONA[side][i][1]; im.title = PERSONA[side][i][1]; bar.appendChild(im); });
+    bar.addEventListener("click", function (e) { e.stopPropagation(); openPersona(v, nm, charId); });
+    bar.addEventListener("pointerdown", function (e) { e.stopPropagation(); });
+    return bar;
+  }
+  function closePersona() { var o = document.getElementById("pmod"); if (o) o.remove(); }
+  function openPersona(v, nm, charId, why) {                                         // 人格を選ぶ（2つまで）。ただの相談用の目印
+    closePersona();
+    var ch = CH[charId]; if (!ch) return;
+    var side = ch.f, ov = el("div", "pmod"), card = el("div", "pcard");
+    ov.id = "pmod";
+    card.appendChild(el("div", "pt", ch.n + " の人格（2つまで）"));
+    card.appendChild(el("div", "pn", "ただの相談用の目印です。ゲーム内で、同じ人格にしなくても大丈夫です。"));
+    (why || []).forEach(function (x) { card.appendChild(el("div", "pwhy", x)); });
+    var grid = el("div", "pgr2");
+    function paint() {
+      grid.textContent = "";
+      var pm = persOf(v, nm);
+      PERSONA[side].forEach(function (pp, i) {
+        var b = el("button", "pbtn" + (pm[i] ? " on" : "")); b.type = "button"; b.title = pp[1];
+        var im = new Image(); im.src = personaUrl(side, i); im.alt = pp[1]; b.appendChild(im);
+        b.appendChild(el("span", "pl", pp[1]));
+        b.addEventListener("click", function () {
+          var cur = persOf(v, nm), o = {};
+          if (cur[i]) o[persPath(v, nm) + "/" + i] = null;
+          else if (Object.keys(cur).length >= 2) { flash("人格は、2つまで選べます。"); return; }
+          else o[persPath(v, nm) + "/" + i] = Date.now();
+          write(o); paint();
+        });
+        grid.appendChild(b);
+      });
+    }
+    paint(); card.appendChild(grid);
+    var close = el("button", "btn go", "とじる"); close.type = "button"; close.addEventListener("click", closePersona);
+    var row = el("div", "row"); row.appendChild(close); card.appendChild(row);
+    ov.addEventListener("click", function (e) { if (e.target === ov) closePersona(); });
+    ov.appendChild(card); $("stage").appendChild(ov);
+  }
   var ROWEDIT = false;                                                               // 編成の編集モード（行の入れ替え・削除。この端末の画面だけ）
   function plOf(stv, base, r, c) {                                                   // 枠（r行・c列）の選手：その枠で決めた選手。決めていなければ、前の形式（列ごとに決めた選手）
     var pl = obj(obj(stv).pl), v = pl[cellName(base, r, c)];
@@ -1524,7 +1603,7 @@
     for (var c = 1; c <= P; c++) {
       var m = {}, src = obj(stv[cellName(base, r, c)]);
       Object.keys(src).forEach(function (k) { if (src[k]) m[k] = src[k]; });
-      out.push({ map: m, pl: plOf(stv, base, r, c) });
+      out.push({ map: m, pl: plOf(stv, base, r, c), pers: persOf(v, cellName(base, r, c)) });
     }
     return out;
   }
@@ -1535,6 +1614,7 @@
       Object.keys(cur).forEach(function (k) { if (!want.map[k]) ops[path + "/" + k] = null; });
       Object.keys(want.map).forEach(function (k) { ops[path + "/" + k] = want.map[k]; });
       plWrite(ops, v, base, r, c, want.pl);
+      persPut(ops, v, nm, want.pers || {});
     }
   }
   function rowMove(v, base, P, r, d) {                                               // 編成を、ひとつ上（-1）／下（+1）へ：選手も、いっしょに動く
@@ -1544,7 +1624,7 @@
   }
   function rowDelete(v, base, P, n, r) {                                             // 編成を消す：下の編成が、ひとつずつ上がる（行の数も、ひとつ減る）
     var ops = {}, empty = [];
-    for (var c = 0; c < P; c++) empty.push({ map: {}, pl: 0 });
+    for (var c = 0; c < P; c++) empty.push({ map: {}, pl: 0, pers: {} });
     for (var k = r; k <= n; k++) rowPut(ops, v, base, k, P, k < n ? rowSnap(v, base, k + 1, P) : empty);
     ops["sets/" + setId() + "/" + v + "/slots/" + base] = Math.max(1, n - 1);
     write(ops);
@@ -1583,7 +1663,7 @@
   function dropMany(items, target, copy, anchor) {                                    // items：[{ id, ch, from }]。copy：複製（元の枠に残す）。anchor：{id, after}＝この名札の前／後ろに入れる
     var ops = {}, any = false;
     if (target.id === "pal") {                                                       // 名札置き場へ戻す：外す
-      items.forEach(function (it) { var old = pathOfFrom(it.from, it.ch.id); if (old) { ops[old] = null; any = true; } });
+      items.forEach(function (it) { var old = pathOfFrom(it.from, it.ch.id); if (old) { ops[old] = null; clearPersOf(ops, it.from); any = true; } });
       SELS = []; HILITE = null;
       if (any) write(ops); else fill();
       return;
@@ -1596,7 +1676,7 @@
         if (it.ch.f !== parts[1]) { bad = bad || it; return; }
         var old = pathOfFrom(it.from, it.ch.id);
         ops[dropPath(spec) + "/" + it.ch.id] = 1;
-        if (old && !copy) ops[old] = null;
+        if (old && !copy) { ops[old] = null; clearPersOf(ops, it.from); }
       });
       if (bad) flash("この枠には" + (parts[1] === "h" ? "ハンター" : "サバイバー") + "のキャラを入れます。");
       SELS = []; HILITE = null;
@@ -1617,7 +1697,7 @@
       var id = it.ch.id, old = pathOfFrom(it.from, id), dest = path + "/" + id;
       if (isSet && it.ch.f !== blockFaction(parts[1], parts[2])) { bad = bad || it; return; }
       if (dest === old) { if (!copy && anchor && anchor.id !== id) add.push(id); return; }                 // 同じ枠の中：Ctrlなしで、場所を指定したときだけ、並べ替え
-      if (cur[id]) { if (old && !copy) ops[old] = null; return; }                                        // すでに入っている（同じ枠に同じ名札は入らない）
+      if (cur[id]) { if (old && !copy) { ops[old] = null; clearPersOf(ops, it.from); } return; }                                        // すでに入っている（同じ枠に同じ名札は入らない）
       if (gbIds[id]) { gbWhy = gbWhy || charName(id) + "は、前のセットで使ったキャラ（GLOBAL BAN）のため、PICKできません。"; return; }
       if (pk && !pk[id]) {
         if (slotFixed && Object.keys(pk).length >= capVal) { capWhy = capWhy || "スロットがあるときは、PICKは" + capVal + "人までです（このスロットは、いっぱいです）。"; return; }
@@ -1625,7 +1705,7 @@
         pk[id] = true;
       }
       add.push(id);
-      if (old && !copy) ops[old] = null;
+      if (old && !copy) { ops[old] = null; clearPersOf(ops, it.from); }
     });
     if (add.length) {
       var rest = order.filter(function (id) { return add.indexOf(id) < 0; }), reorder = !!anchor || add.some(function (id) { return cur[id]; });
@@ -1651,6 +1731,8 @@
       Object.keys(cur).forEach(function (k) { ops[path + "/" + k] = null; ops[srcPath + "/" + k] = Date.now(); });
       ops[path + "/" + id] = Date.now();
       ops[old] = null;
+      var pa = persOf(f, sp0[2]), pb = persOf(f, parts[2]);                         // 人格も、入れ替わる
+      persPut(ops, f, parts[2], pa); persPut(ops, f, sp0[2], pb);
     }
     else if (old !== path + "/" + id) {
       var row = blockPickedMap(s0, f, parts[2]), placed = rowPlaced(f, cm.base, cm.r, P), gb = {}, hd = hardOf(s0);
@@ -1663,6 +1745,8 @@
         Object.keys(cur).forEach(function (k) { ops[path + "/" + k] = null; });
         ops[path + "/" + id] = Date.now();
         if (old && !copy) ops[old] = null;
+        persPut(ops, f, parts[2], scm ? persOf(f, sp0[2]) : {});                    // 枠から枠へ動かしたときは、人格もついていく（置き換えた先の人格は、消える）
+        if (old && !copy) clearPersOf(ops, it.from);
       }
     }
     if (msg) flash(msg);
@@ -2302,11 +2386,12 @@
             if (isBad && base === "pick") mw.push(charName(id) + "は、編成" + (cmx ? cmx.r : "") + "でGLOBAL BANされているため、PICKできません。");
             if (isBad && base === "epick") mw.push(charName(id) + "は、前のセットで相手が使ったキャラ（相手のGLOBAL BAN）のため、PICKできない予想になります。");
             if (cst0.violated[id]) mw = mw.concat(cst0.violated[id]);
-            var tg = makeTag(CH[id], { req: !!req[id], bad: isBad, gray: !!cst0.violated[id], why: mw, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; write(o); } });
+            var tg = makeTag(CH[id], { req: !!req[id], bad: isBad, gray: !!cst0.violated[id], why: mw, onRemove: function () { var o = {}; o[dropPath(spec) + "/" + id] = null; persPut(o, f, nm, {}); write(o); } });
             if (isSel(id, { kind: "blk", spec: spec })) tg.classList.add("sel");
             attachTag(tg, CH[id], { kind: "blk", spec: spec });
             d.appendChild(tg);
           });
+          if (ids.length) d.appendChild(personaBar(f, nm, ids[0]));                  // 名札の下：人格
         }
         ["s", "h"].forEach(function (f) {
           ["ban", "pick", "eban", "epick"].forEach(function (base) {
