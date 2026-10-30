@@ -115,9 +115,9 @@
   .pmod { position: absolute; inset: 0; z-index: 60; background: rgba(0, 0, 0, .55); display: flex; align-items: center; justify-content: center; }
   .pcard { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; max-width: 92%; width: 420px; display: flex; flex-direction: column; gap: 10px; }
   .pcard .pt { font-weight: 800; font-size: 16px; } .pcard .pn { font-size: 12px; color: var(--sub); } .pcard .pwhy { font-size: 12px; color: var(--gold); }
-  .pgr2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .pbtn { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; border: 2px solid var(--line); background: var(--panel); color: var(--text); font: inherit; font-size: 12px; cursor: pointer; text-align: left; }
-  .pbtn.on { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 210, 63, .6); } .pbtn img { width: 36px; height: 36px; object-fit: contain; flex: none; }
+  .pgr2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .pbtn { display: flex; align-items: center; justify-content: center; padding: 8px; border-radius: 10px; border: 2px solid var(--line); background: var(--panel); cursor: pointer; }
+  .pbtn.on { border-color: var(--gold); box-shadow: 0 0 10px rgba(255, 210, 63, .6); } .pbtn img { width: 64px; height: 64px; object-fit: contain; flex: none; }
   .sbtn.txt { width: auto; padding: 0 8px; font-size: 12px; } .sbtn.arm { border-color: var(--gold); color: var(--gold); } .sbtn[disabled] { opacity: .35; cursor: default; }
   .cellw { display: flex; flex-direction: column; gap: 3px; min-width: 0; } .cellw .psel { width: 100%; }
   .rowctl { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 0 4px; } .rowctl .rn { font-size: 11px; color: var(--sub); white-space: nowrap; } .rowctl .rg { font-size: 16px; color: var(--gold); }
@@ -1576,7 +1576,6 @@
       PERSONA[side].forEach(function (pp, i) {
         var b = el("button", "pbtn" + (pm[i] ? " on" : "")); b.type = "button"; b.title = pp[1];
         var im = new Image(); im.src = personaUrl(side, i); im.alt = pp[1]; b.appendChild(im);
-        b.appendChild(el("span", "pl", pp[1]));
         b.addEventListener("click", function () {
           var cur = persOf(v, nm), o = {};
           if (cur[i]) o[persPath(v, nm) + "/" + i] = null;
